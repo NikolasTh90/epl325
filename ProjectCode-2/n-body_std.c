@@ -441,11 +441,10 @@ void printBodiesInfo(FILE *lfp, FILE *dfp)
 int myMain(int argc, char *argv[], char* exec_type)
 {
 	int i;
-	char* log_file, data_file;
-	log_file = calloc(1, strlen("logfile_") + strlen(exec_type) + 1);
+	char* log_file = calloc(1, strlen("logfile_") + strlen(exec_type) + 1);
 	strcpy(log_file, "logfile_");
 	strcat(log_file, exec_type);
-	data_file = calloc(1, strlen("data_") + strlen(exec_type) + 1);
+	char* data_file = calloc(1, strlen("data_") + strlen(exec_type) + 1);
 	strcpy(data_file, "data_");
 	strcat(data_file, exec_type);		
 
