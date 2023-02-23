@@ -20,6 +20,7 @@ Code Ref:https://rosettacode.org/wiki/N-body_problem#C
 #include <math.h>
 #include "support.h"
 #include <omp.h>
+#include <string.h>
 // Chnage this value to reflect your ID number
 #define ID 1030496
 typedef struct
