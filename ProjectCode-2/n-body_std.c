@@ -390,8 +390,6 @@ void n_body_omp_static(int threads)
 	SimulationTime++;
 	omp_set_num_threads(threads);
 	char* execution_type = "static";
-	printf(execution_type);
-	fflush(stdout);
 
 	computeAccelerations(execution_type);
 	computePositions(execution_type);
