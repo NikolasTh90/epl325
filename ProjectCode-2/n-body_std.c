@@ -501,7 +501,7 @@ int myMain(int argc, char *argv[], char* exec_type)
 					n_body_omp_guided(threads);		
 			else
 				simulate();
-		}
+		
 #ifdef DEBUG
 		int j;
 		// printf("\nCycle %d\n",i+1);
