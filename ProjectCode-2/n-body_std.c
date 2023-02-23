@@ -29,6 +29,7 @@ typedef struct
 
 int bodies, timeSteps;
 int SimulationTime = 0;
+int threads = 1;
 double *masses, GravConstant;
 vector *positions, *velocities, *accelerations;
 /*
@@ -125,53 +126,254 @@ void resolveCollisions()
 		}
 }
 
-void computeAccelerations()
+void computeAccelerations(char* exec_type)
 {
 	int i,j;
-	#pragma omp parallel private(i, j) default(none) shared(accelerations, positions, masses, GravConstant, bodies)
-	{
-	#pragma omp for schedule(static)
-	for (i = 0; i < bodies; i++)
-	{
-		accelerations[i].x = 0;
-		accelerations[i].y = 0;
-		accelerations[i].z = 0;
-	// #pragma omp parallel for schedule(static)
-		for (j = 0; j < bodies; j++)
+	if (strcmp(exec_type, "static") == 0){
+		#pragma omp parallel private(i, j) default(none) shared(accelerations, positions, masses, GravConstant, bodies)
 		{
-			if (i != j)
+		#pragma omp for schedule(static,bodies/threads) 
+		
+
+		for (i = 0; i < bodies; i++)
+		{
+			accelerations[i].x = 0;
+			accelerations[i].y = 0;
+			accelerations[i].z = 0;
+		// #pragma omp parallel for schedule(static)
+			for (j = 0; j < bodies; j++)
 			{
-				// accelerations[i] = addVectors(accelerations[i],scaleVector(GravConstant*masses[j]/pow(mod(subtractVectors(positions[i],positions[j])),3),subtractVectors(positions[j],positions[i])));
-				vector sij = {positions[i].x - positions[j].x, positions[i].y - positions[j].y, positions[i].z - positions[j].z};
-				vector sji = {positions[j].x - positions[i].x, positions[j].y - positions[i].y, positions[j].z - positions[i].z};
-				double mod = sqrt(sij.x * sij.x + sij.y * sij.y + sij.z * sij.z);
-				double mod3 = mod * mod * mod;
-				double s = GravConstant * masses[j] / mod3;
-				vector S = {s * sji.x, s * sji.y, s * sji.z};
-				accelerations[i].x += S.x;
-				accelerations[i].y += S.y;
-				accelerations[i].z += S.z;
+				if (i != j)
+				{
+					// accelerations[i] = addVectors(accelerations[i],scaleVector(GravConstant*masses[j]/pow(mod(subtractVectors(positions[i],positions[j])),3),subtractVectors(positions[j],positions[i])));
+					vector sij = {positions[i].x - positions[j].x, positions[i].y - positions[j].y, positions[i].z - positions[j].z};
+					vector sji = {positions[j].x - positions[i].x, positions[j].y - positions[i].y, positions[j].z - positions[i].z};
+					double mod = sqrt(sij.x * sij.x + sij.y * sij.y + sij.z * sij.z);
+					double mod3 = mod * mod * mod;
+					double s = GravConstant * masses[j] / mod3;
+					vector S = {s * sji.x, s * sji.y, s * sji.z};
+					accelerations[i].x += S.x;
+					accelerations[i].y += S.y;
+					accelerations[i].z += S.z;
+				}
+			}
+		}
+		
+		}
+	}
+	else if (strcmp(exec_type, "dynamic") == 0) {
+		#pragma omp parallel private(i, j) default(none) shared(accelerations, positions, masses, GravConstant, bodies)
+		{
+		#pragma omp for schedule(dynamic) 
+		
+
+		for (i = 0; i < bodies; i++)
+		{
+			accelerations[i].x = 0;
+			accelerations[i].y = 0;
+			accelerations[i].z = 0;
+		// #pragma omp parallel for schedule(static)
+			for (j = 0; j < bodies; j++)
+			{
+				if (i != j)
+				{
+					// accelerations[i] = addVectors(accelerations[i],scaleVector(GravConstant*masses[j]/pow(mod(subtractVectors(positions[i],positions[j])),3),subtractVectors(positions[j],positions[i])));
+					vector sij = {positions[i].x - positions[j].x, positions[i].y - positions[j].y, positions[i].z - positions[j].z};
+					vector sji = {positions[j].x - positions[i].x, positions[j].y - positions[i].y, positions[j].z - positions[i].z};
+					double mod = sqrt(sij.x * sij.x + sij.y * sij.y + sij.z * sij.z);
+					double mod3 = mod * mod * mod;
+					double s = GravConstant * masses[j] / mod3;
+					vector S = {s * sji.x, s * sji.y, s * sji.z};
+					accelerations[i].x += S.x;
+					accelerations[i].y += S.y;
+					accelerations[i].z += S.z;
+				}
+			}
+		}
+		
+		}
+	
+	}
+
+	else if (strcmp(exec_type, "guided") == 0){
+		#pragma omp parallel private(i, j) default(none) shared(accelerations, positions, masses, GravConstant, bodies)
+		{
+		#pragma omp for schedule(guided) 
+		
+
+		for (i = 0; i < bodies; i++)
+		{
+			accelerations[i].x = 0;
+			accelerations[i].y = 0;
+			accelerations[i].z = 0;
+		// #pragma omp parallel for schedule(static)
+			for (j = 0; j < bodies; j++)
+			{
+				if (i != j)
+				{
+					// accelerations[i] = addVectors(accelerations[i],scaleVector(GravConstant*masses[j]/pow(mod(subtractVectors(positions[i],positions[j])),3),subtractVectors(positions[j],positions[i])));
+					vector sij = {positions[i].x - positions[j].x, positions[i].y - positions[j].y, positions[i].z - positions[j].z};
+					vector sji = {positions[j].x - positions[i].x, positions[j].y - positions[i].y, positions[j].z - positions[i].z};
+					double mod = sqrt(sij.x * sij.x + sij.y * sij.y + sij.z * sij.z);
+					double mod3 = mod * mod * mod;
+					double s = GravConstant * masses[j] / mod3;
+					vector S = {s * sji.x, s * sji.y, s * sji.z};
+					accelerations[i].x += S.x;
+					accelerations[i].y += S.y;
+					accelerations[i].z += S.z;
+				}
+			}
+		}
+		
+		}
+
+	}
+	else {
+
+		for (i = 0; i < bodies; i++)
+		{
+			accelerations[i].x = 0;
+			accelerations[i].y = 0;
+			accelerations[i].z = 0;
+		// #pragma omp parallel for schedule(static)
+			for (j = 0; j < bodies; j++)
+			{
+				if (i != j)
+				{
+					// accelerations[i] = addVectors(accelerations[i],scaleVector(GravConstant*masses[j]/pow(mod(subtractVectors(positions[i],positions[j])),3),subtractVectors(positions[j],positions[i])));
+					vector sij = {positions[i].x - positions[j].x, positions[i].y - positions[j].y, positions[i].z - positions[j].z};
+					vector sji = {positions[j].x - positions[i].x, positions[j].y - positions[i].y, positions[j].z - positions[i].z};
+					double mod = sqrt(sij.x * sij.x + sij.y * sij.y + sij.z * sij.z);
+					double mod3 = mod * mod * mod;
+					double s = GravConstant * masses[j] / mod3;
+					vector S = {s * sji.x, s * sji.y, s * sji.z};
+					accelerations[i].x += S.x;
+					accelerations[i].y += S.y;
+					accelerations[i].z += S.z;
+				}
+			}
+		}
+
+	}
+}
+
+void computeVelocities(char* exec_type)
+{
+	int i;
+	if(strcmp(exec_type, "static") == 0)
+	{
+		#pragma omp parallel private(i) default(none) shared(accelerations, velocities)
+		{
+			#pragma omp for schedule(static, bodies/threads)
+			{ 
+				for (i = 0; i < bodies; i++)
+				{
+					// velocities[i] = addVectors(velocities[i],accelerations[i]);
+					vector ac = {velocities[i].x + accelerations[i].x, velocities[i].y + accelerations[i].y, velocities[i].z + accelerations[i].z};
+					velocities[i] = ac;
+				}
 			}
 		}
 	}
-	
-	}
-}
-
-void computeVelocities()
-{
-	int i;
-	for (i = 0; i < bodies; i++)
+	else if (strcmp(exec_type,"dynamic") == 0)
 	{
-		// velocities[i] = addVectors(velocities[i],accelerations[i]);
-		vector ac = {velocities[i].x + accelerations[i].x, velocities[i].y + accelerations[i].y, velocities[i].z + accelerations[i].z};
-		velocities[i] = ac;
+		#pragma omp parallel private(i) default(none) shared(accelerations, velocities)
+		{
+			#pragma omp for schedule(dynamic)
+			{ 
+				for (i = 0; i < bodies; i++)
+				{
+					// velocities[i] = addVectors(velocities[i],accelerations[i]);
+					vector ac = {velocities[i].x + accelerations[i].x, velocities[i].y + accelerations[i].y, velocities[i].z + accelerations[i].z};
+					velocities[i] = ac;
+				}
+			}
+		}
 	}
+	else if (strcmp(exec_type,"guided") == 0)
+	{
+		#pragma omp parallel private(i) default(none) shared(accelerations, velocities)
+		{
+			#pragma omp for schedule(guided)
+			{ 
+				for (i = 0; i < bodies; i++)
+				{
+					// velocities[i] = addVectors(velocities[i],accelerations[i]);
+					vector ac = {velocities[i].x + accelerations[i].x, velocities[i].y + accelerations[i].y, velocities[i].z + accelerations[i].z};
+					velocities[i] = ac;
+				}
+			}
+		}
+	}
+	else
+	{
+		for (i = 0; i < bodies; i++)
+		{
+			// velocities[i] = addVectors(velocities[i],accelerations[i]);
+			vector ac = {velocities[i].x + accelerations[i].x, velocities[i].y + accelerations[i].y, velocities[i].z + accelerations[i].z};
+			velocities[i] = ac;
+		}
+			
+	}
+
+
 }
 
-void computePositions()
+void computePositions(char* exec_type)
 {
 	int i;
+	if (strcmp(exec_type, "static") == 0)
+	{
+		#pragma omp parallel private(i) default(none) shared(accelerations, velocities, positions)
+		{
+			#pragma omp for schedule(static, bodies/threads)
+			{
+				for (i = 0; i < bodies; i++)
+				{
+					// positions[i] = addVectors(positions[i],addVectors(velocities[i],scaleVector(0.5,accelerations[i])));
+					vector sc = {0.5 * accelerations[i].x, 0.5 * accelerations[i].y, 0.5 * accelerations[i].z};
+					vector ac = {velocities[i].x + sc.x, velocities[i].y + sc.y, velocities[i].z + sc.z};
+					vector bc = {positions[i].x + ac.x, positions[i].y + ac.y, positions[i].z + ac.z};
+					positions[i] = bc;
+				}
+			}	
+		}	
+	}
+	else if (strcmp(exec_type, "dynamic") == 0)
+	{
+		#pragma omp parallel private(i) default(none) shared(accelerations, velocities, positions)
+		{
+			#pragma omp for schedule(dynamic)
+			{
+				for (i = 0; i < bodies; i++)
+				{
+					// positions[i] = addVectors(positions[i],addVectors(velocities[i],scaleVector(0.5,accelerations[i])));
+					vector sc = {0.5 * accelerations[i].x, 0.5 * accelerations[i].y, 0.5 * accelerations[i].z};
+					vector ac = {velocities[i].x + sc.x, velocities[i].y + sc.y, velocities[i].z + sc.z};
+					vector bc = {positions[i].x + ac.x, positions[i].y + ac.y, positions[i].z + ac.z};
+					positions[i] = bc;
+				}
+			}	
+		}	
+	}
+	else if (strcmp(exec_type, "guided") == 0)
+	{
+		#pragma omp parallel private(i) default(none) shared(accelerations, velocities, positions)
+		{
+			#pragma omp for schedule(guided)
+			{
+				for (i = 0; i < bodies; i++)
+				{
+					// positions[i] = addVectors(positions[i],addVectors(velocities[i],scaleVector(0.5,accelerations[i])));
+					vector sc = {0.5 * accelerations[i].x, 0.5 * accelerations[i].y, 0.5 * accelerations[i].z};
+					vector ac = {velocities[i].x + sc.x, velocities[i].y + sc.y, velocities[i].z + sc.z};
+					vector bc = {positions[i].x + ac.x, positions[i].y + ac.y, positions[i].z + ac.z};
+					positions[i] = bc;
+				}
+			}	
+		}	
+	}
+	else
 	for (i = 0; i < bodies; i++)
 	{
 		// positions[i] = addVectors(positions[i],addVectors(velocities[i],scaleVector(0.5,accelerations[i])));
@@ -185,11 +387,50 @@ void computePositions()
 void simulate()
 {
 	SimulationTime++;
-	computeAccelerations();
-	computePositions();
-	computeVelocities();
-	resolveCollisions();
+	char* execution_type = "serial";
+	computeAccelerations(execution_type);
+	computePositions(execution_type);
+	computeVelocities(execution_type);
+	resolveCollisions(execution_type);
 }
+
+void n_body_omp_static(int threads)
+{
+	SimulationTime++;
+	omp_set_num_threads(threads);
+	char* execution_type = "static";
+
+	computeAccelerations(execution_type);
+	computePositions(execution_type);
+	computeVelocities(execution_type);
+	resolveCollisions(execution_type);
+}
+
+void n_body_omp_dynamic(int threads)
+{
+	SimulationTime++;
+	omp_set_num_threads(threads);
+	char* execution_type = "dynamic";
+
+	computeAccelerations(execution_type);
+	computePositions(execution_type);
+	computeVelocities(execution_type);
+	resolveCollisions(execution_type);
+}
+
+void n_body_omp_guided(int threads)
+{
+	SimulationTime++;
+	omp_set_num_threads(threads);
+	char* execution_type = "guided";
+
+	computeAccelerations(execution_type);
+	computePositions(execution_type);
+	computeVelocities(execution_type);
+	resolveCollisions(execution_type);
+}
+
+
 
 void printBodiesInfo(FILE *lfp, FILE *dfp)
 {
@@ -202,27 +443,52 @@ void printBodiesInfo(FILE *lfp, FILE *dfp)
 	fprintf(stdout, "-------------------------------------------------------------------------------------------\n");
 }
 
-int main(int argc, char *argv[])
+
+
+int myMain(int argc, char *argv[], char* exec_type)
 {
-	omp_set_num_threads(6);
 	int i;
-	FILE *lfp = fopen("./outputs/logfile.txt", "w");
-	FILE *dfp = fopen("./outputs/data.dat", "w");
+	FILE *lfp = fopen(strcat("./outputs/logfile_", exec_type), "w");
+	FILE *dfp = fopen(strcat("./outputs/data_", exec_type), "w");
 	if (lfp == NULL || dfp == NULL)
 	{
 		printf("Please create the ./outputs directory\n");
 		return -1;
 	}
-	if (argc == 3)
+
+	if(argc == 3){
+		timeSteps = atoi(argv[1]);
+		bodies = atoi(argv[2]);
+		threads = 1;
+		printf("%%*** RUNNING WITH VALUES %d timesteps %d bodies and %d thread(s) ***\n",timeSteps, bodies, threads);
+
+	}
+	else
+	if (argc == 4)
 	{
 		timeSteps = atoi(argv[1]);
 		bodies = atoi(argv[2]);
+		threads = atoi(argv[3]);
+		printf("%%*** RUNNING WITH VALUES %d timesteps %d bodies and %d thread(s) ***\n",timeSteps, bodies, threads);
+
 	}
 	else
-	{
-		printf("%%*** RUNNING WITH DEFAULT VALUES ***\n");
+	if (argc == 2){
 		timeSteps = 10000;
 		bodies = 200;
+		threads = atoi(argv[1]);
+		printf("%%*** RUNNING WITH DEFAULT VALUES %d timesteps %d bodies and %d thread(s) ***\n",timeSteps, bodies, threads);
+
+		
+	}
+
+	else
+	{
+		timeSteps = 10000;
+		bodies = 200;
+		threads = 1;
+		printf("%%*** RUNNING WITH DEFAULT VALUES %d timesteps %d bodies and %d thread(s) ***\n",timeSteps, bodies, threads);
+
 	}
 	initiateSystemRND(bodies);
 	// initiateSystem("input.txt");
@@ -234,7 +500,17 @@ int main(int argc, char *argv[])
 	startTime(0);
 	for (i = 0; i < timeSteps; i++)
 	{
-		simulate();
+			if(strcmp(exec_type, "static") == 0)
+				n_body_omp_static(threads);
+			else	
+				if(strcmp(exec_type, "dynaic") == 0)
+					n_body_omp_dynamic(threads);
+			else		
+				if(strcmp(exec_type, "guided") == 0)
+					n_body_omp_guided(threads);		
+			else
+				simulate();
+		}
 #ifdef DEBUG
 		int j;
 		// printf("\nCycle %d\n",i+1);
@@ -250,4 +526,15 @@ int main(int argc, char *argv[])
 	fclose(lfp);
 	fclose(dfp);
 	return 0;
+}
+
+int main(int argc, char *argv[])
+{
+	myMain(argc, argv, "static");
+	myMain(argc, argv, "dynamic");
+	myMain(argc, argv, "guided");
+
+	myMain(argc, argv, "serial");
+
+	
 }
