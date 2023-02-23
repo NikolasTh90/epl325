@@ -131,7 +131,7 @@ void computeAccelerations(char* exec_type)
 {
 	int i,j;
 	if (strcmp(exec_type, "static") == 0){
-		#pragma omp parallel private(i, j) default(none) shared(accelerations, positions, masses, GravConstant, bodies)
+		#pragma omp parallel private(i, j) default(none) shared(accelerations, positions, masses, GravConstant, threads, bodies)
 		{
 		#pragma omp for schedule(static,bodies/threads) 
 		for (i = 0; i < bodies; i++)
@@ -527,5 +527,5 @@ int main(int argc, char *argv[])
 
 	myMain(argc, argv, "serial");
 
-	
+	return 0;
 }
