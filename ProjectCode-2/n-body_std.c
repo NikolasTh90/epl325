@@ -378,7 +378,7 @@ void computePositions(char* exec_type)
 void simulate()
 {
 	SimulationTime++;
-	char[] execution_type = "serial"; 
+	char* execution_type = "serial";
 	computeAccelerations(execution_type);
 	computePositions(execution_type);
 	computeVelocities(execution_type);
@@ -389,7 +389,9 @@ void n_body_omp_static(int threads)
 {
 	SimulationTime++;
 	omp_set_num_threads(threads);
-	char[] execution_type = "static";
+	char* execution_type = "static";
+	printf(execution_type);
+	fflush(stdout);
 
 	computeAccelerations(execution_type);
 	computePositions(execution_type);
@@ -401,7 +403,7 @@ void n_body_omp_dynamic(int threads)
 {
 	SimulationTime++;
 	omp_set_num_threads(threads);
-	char[] execution_type = "dynamic";
+	char* execution_type = "dynamic";
 
 	computeAccelerations(execution_type);
 	computePositions(execution_type);
@@ -413,7 +415,7 @@ void n_body_omp_guided(int threads)
 {
 	SimulationTime++;
 	omp_set_num_threads(threads);
-	char[] execution_type = "guided";
+	char* execution_type = "guided";
 
 	computeAccelerations(execution_type);
 	computePositions(execution_type);
