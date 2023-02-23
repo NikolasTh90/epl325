@@ -257,7 +257,7 @@ void computeVelocities(char* exec_type)
 	int i;
 	if(strcmp(exec_type, "static") == 0)
 	{
-		#pragma omp parallel private(i) default(none) shared(accelerations, velocities)
+		#pragma omp parallel private(i) default(none) shared(accelerations, velocities, threads, bodies)
 		{
 			#pragma omp for schedule(static, bodies/threads)
 				for (i = 0; i < bodies; i++)
@@ -270,7 +270,7 @@ void computeVelocities(char* exec_type)
 	}
 	else if (strcmp(exec_type,"dynamic") == 0)
 	{
-		#pragma omp parallel private(i) default(none) shared(accelerations, velocities)
+		#pragma omp parallel private(i) default(none) shared(accelerations, velocities, threads, bodies)
 		{
 			#pragma omp for schedule(dynamic)
 				for (i = 0; i < bodies; i++)
@@ -283,7 +283,7 @@ void computeVelocities(char* exec_type)
 	}
 	else if (strcmp(exec_type,"guided") == 0)
 	{
-		#pragma omp parallel private(i) default(none) shared(accelerations, velocities)
+		#pragma omp parallel private(i) default(none) shared(accelerations, velocities, threads, bodies)
 		{
 			#pragma omp for schedule(guided)
 			 
@@ -315,7 +315,7 @@ void computePositions(char* exec_type)
 	int i;
 	if (strcmp(exec_type, "static") == 0)
 	{
-		#pragma omp parallel private(i) default(none) shared(accelerations, velocities, positions)
+		#pragma omp parallel private(i) default(none) shared(accelerations, velocities, positions, threads, bodies)
 		{
 			#pragma omp for schedule(static, bodies/threads)
 			
@@ -332,7 +332,7 @@ void computePositions(char* exec_type)
 	}
 	else if (strcmp(exec_type, "dynamic") == 0)
 	{
-		#pragma omp parallel private(i) default(none) shared(accelerations, velocities, positions)
+		#pragma omp parallel private(i) default(none) shared(accelerations, velocities, positions, threads, bodies)
 		{
 			#pragma omp for schedule(dynamic)
 			
@@ -349,7 +349,7 @@ void computePositions(char* exec_type)
 	}
 	else if (strcmp(exec_type, "guided") == 0)
 	{
-		#pragma omp parallel private(i) default(none) shared(accelerations, velocities, positions)
+		#pragma omp parallel private(i) default(none) shared(accelerations, velocities, positions, threads, bodies)
 		{
 			#pragma omp for schedule(guided)
 			
