@@ -441,8 +441,12 @@ void printBodiesInfo(FILE *lfp, FILE *dfp)
 int myMain(int argc, char *argv[], char* exec_type)
 {
 	int i;
-	FILE *lfp = fopen(strcat("./outputs/logfile_", exec_type), "w");
-	FILE *dfp = fopen(strcat("./outputs/data_", exec_type), "w");
+	char* log_file, data_file;
+	sprintf(log_file, "./outputs/logfile_%s",exec_type);
+	sprintf(data_file, "./outputs/data_%s",exec_type);
+
+	FILE *lfp = fopen(log_file, "w");
+	FILE *dfp = fopen(data_file, "w");
 	if (lfp == NULL || dfp == NULL)
 	{
 		printf("Please create the ./outputs directory\n");
