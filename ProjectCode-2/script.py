@@ -15,7 +15,7 @@ def create_sbatch(o_flag=0, number_of_threads=40):
         sbatch.write('### Job name\n')
         sbatch.write('#SBATCH --output=output.txt ### Output file\n')
         sbatch.write('lscpu > lscpu_output.txt\n')
-        sbatch.write('gcc -lpthread -fopenmp -Werror -Wall -lm -O' + str(o_flag) + ' n-body_std_parallel.c\n')
+        sbatch.write('gcc -lpthread -fopenmp -Werror -Wall -lm -O' + str(o_flag) + ' n-body_std.c\n')
         sbatch.write('./a.out ' + str(number_of_threads) + '\n')
     
 
