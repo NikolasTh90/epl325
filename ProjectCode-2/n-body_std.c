@@ -634,7 +634,7 @@ int myMain(int argc, char *argv[], char* exec_type)
 			if(strcmp(exec_type, "static") == 0)
 				n_body_omp_static(threads);
 			else	
-				if(strcmp(exec_type, "dynaic") == 0)
+				if(strcmp(exec_type, "dynamic") == 0)
 					n_body_omp_dynamic(threads);
 			else		
 				if(strcmp(exec_type, "guided") == 0)
