@@ -99,32 +99,165 @@ void initiateSystem(char* fileName){
 	fclose(fp);
 }
 */
-void resolveCollisions()
+
+
+void resolveCollisions_static(int nthreads){
+	int i,j;
+	double dx,dy,dz,md;
+	int velocity_swaps[bodies-1][bodies];
+	# pragma omp parallel private(i,j,dx,dy,dz,md) shared(bodies,masses,positions,swaps,velocities,nthreads) default(none)
+	{
+		# pragma omp for schedule(static, bodies/nthreads)
+		for(i=0;i<bodies-1;i++){
+			int step = 0;
+			for(j=i+1;j<bodies;j++){
+				md = masses[i]+masses[j];
+				dx = fabs(positions[i].x-positions[j].x);
+				dy = fabs(positions[i].y-positions[j].y);
+				dz = fabs(positions[i].z-positions[j].z);
+				if(dx<md && dy<md && dz<md){
+					//Swap Velocities
+					
+					// Change i with j
+					velocity_swaps[i][step++] = j;
+				}
+			}
+			velocity_swaps[i][step] = -1;
+		}
+		# pragma omp barrier
+		# pragma omp single
+		{	
+			for (i=0; i<bodies-1; i++){
+				j = 0;
+				while(velocity_swaps[i][j] != -1){
+					vector temp = velocities[i];
+					velocities[i] = velocities[velocity_swaps[i][j]];
+					velocities[velocity_swaps[i][j]] = temp;
+					j++;
+				}
+			}
+		}
+	}
+
+}
+
+
+
+
+void resolveCollisions(char* exec_type)
 {
 	int i, j;
 	double dx, dy, dz, md;
+	int velocity_swaps[bodies-1][bodies];
 
-	for (i = 0; i < bodies - 1; i++)
-		for (j = i + 1; j < bodies; j++)
-		{
-			md = masses[i] + masses[j];
-			dx = fabs(positions[i].x - positions[j].x);
-			dy = fabs(positions[i].y - positions[j].y);
-			dz = fabs(positions[i].z - positions[j].z);
-			// if(positions[i].x==positions[j].x && positions[i].y==positions[j].y && positions[i].z==positions[j].z){
-			if (dx < md && dy < md && dz < md)
+	if (strcmp(exec_type, "serial") == 0){
+		for (i = 0; i < bodies - 1; i++)
+			for (j = i + 1; j < bodies; j++)
 			{
-// Swap Velocities
-#ifdef DEBUG
-				fprintf(stderr, "T=%d;%lf:%lf:%lf<->%lf:%lf:%lf", SimulationTime, positions[i].x, positions[i].y, positions[i].z, positions[j].x, positions[j].y, positions[j].z);
-				fprintf(stderr, "[md:%lf::%lf:%lf:%lf]", md, dx, dy, dz);
-				fprintf(stderr, "\tCollision(%d):%d<->%d\n", SimulationTime, i, j);
-#endif
-				vector temp = velocities[i];
-				velocities[i] = velocities[j];
-				velocities[j] = temp;
+				md = masses[i] + masses[j];
+				dx = fabs(positions[i].x - positions[j].x);
+				dy = fabs(positions[i].y - positions[j].y);
+				dz = fabs(positions[i].z - positions[j].z);
+				// if(positions[i].x==positions[j].x && positions[i].y==positions[j].y && positions[i].z==positions[j].z){
+				if (dx < md && dy < md && dz < md)
+				{
+	// Swap Velocities
+	#ifdef DEBUG
+					fprintf(stderr, "T=%d;%lf:%lf:%lf<->%lf:%lf:%lf", SimulationTime, positions[i].x, positions[i].y, positions[i].z, positions[j].x, positions[j].y, positions[j].z);
+					fprintf(stderr, "[md:%lf::%lf:%lf:%lf]", md, dx, dy, dz);
+					fprintf(stderr, "\tCollision(%d):%d<->%d\n", SimulationTime, i, j);
+	#endif
+					vector temp = velocities[i];
+					velocities[i] = velocities[j];
+					velocities[j] = temp;
+				}
+			}
+			return;
+	}
+
+
+
+
+	# pragma omp parallel private(i,j,dx,dy,dz,md) shared(bodies,masses,positions,swaps,velocities,nthreads) default(none)
+	{
+	if (strcmp(exec_type, "static") == 0){
+		# pragma omp for schedule(static, bodies/nthreads)
+		for(i=0;i<bodies-1;i++){
+			int step = 0;
+			for(j=i+1;j<bodies;j++){
+				md = masses[i]+masses[j];
+				dx = fabs(positions[i].x-positions[j].x);
+				dy = fabs(positions[i].y-positions[j].y);
+				dz = fabs(positions[i].z-positions[j].z);
+				if(dx<md && dy<md && dz<md){
+					//Swap Velocities
+					
+					// Change i with j
+					velocity_swaps[i][step++] = j;
+				}
+			}
+			velocity_swaps[i][step] = -1;
+		}
+	}
+	if(strcmp(exec_type, "dynamic")==0){
+		# pragma omp for schedule(dynamic)
+		for(i=0;i<bodies-1;i++){
+			int step = 0;
+			for(j=i+1;j<bodies;j++){
+				md = masses[i]+masses[j];
+				dx = fabs(positions[i].x-positions[j].x);
+				dy = fabs(positions[i].y-positions[j].y);
+				dz = fabs(positions[i].z-positions[j].z);
+				if(dx<md && dy<md && dz<md){
+					//Swap Velocities
+					
+					// Change i with j
+					velocity_swaps[i][step++] = j;
+				}
+			}
+			velocity_swaps[i][step] = -1;
+		}
+	}
+	if(strcmp(exec_type, "guided")==0){
+		# pragma omp for schedule(guided)
+		for(i=0;i<bodies-1;i++){
+			int step = 0;
+			for(j=i+1;j<bodies;j++){
+				md = masses[i]+masses[j];
+				dx = fabs(positions[i].x-positions[j].x);
+				dy = fabs(positions[i].y-positions[j].y);
+				dz = fabs(positions[i].z-positions[j].z);
+				if(dx<md && dy<md && dz<md){
+					//Swap Velocities
+					
+					// Change i with j
+					velocity_swaps[i][step++] = j;
+				}
+			}
+			velocity_swaps[i][step] = -1;
+		}
+	}
+
+	# pragma omp barrier
+		# pragma omp single
+		{	
+			for (i=0; i<bodies-1; i++){
+				j = 0;
+				while(velocity_swaps[i][j] != -1){
+					vector temp = velocities[i];
+					velocities[i] = velocities[velocity_swaps[i][j]];
+					velocities[velocity_swaps[i][j]] = temp;
+					j++;
+				}
 			}
 		}
+
+
+		
+
+
+	
+	}
 }
 
 void computeAccelerations(char* exec_type)
