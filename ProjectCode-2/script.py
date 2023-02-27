@@ -38,7 +38,7 @@ for o_flag in (0,3):
         print('Creating O' + str(o_flag) + ' with ' + str(threads) + ' threads')
         create_sbatch(o_flag=o_flag, number_of_threads=threads)
         submit_sbatch()
-        sleep(60)
+        sleep(45)
         times.append([str(o_flag) + ',' + str(threads)] + get_simulation_times())
 
 # create_sbatch()
