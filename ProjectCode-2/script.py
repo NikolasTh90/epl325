@@ -5,7 +5,7 @@ def create_sbatch(o_flag=0, number_of_threads=40):
         sbatch.write('### Partition\n')
         sbatch.write('#SBATCH --nodes=1\n')
         sbatch.write('### Number of Nodes\n')
-        sbatch.write('#SBATCH --time=1:00:00\n')
+        sbatch.write('#SBATCH --time=0:01:00\n')
         sbatch.write('### WallTime\n')
         sbatch.write('#SBATCH --ntasks=1\n')
         sbatch.write('### Number of tasks\n')
@@ -38,7 +38,7 @@ for o_flag in (0,3):
         print('Creating O' + str(o_flag) + ' with ' + str(threads) + ' threads')
         create_sbatch(o_flag=o_flag, number_of_threads=threads)
         submit_sbatch()
-        sleep(42)
+        sleep(60)
         times.append([str(o_flag) + ',' + str(threads)] + get_simulation_times())
 
 # create_sbatch()
