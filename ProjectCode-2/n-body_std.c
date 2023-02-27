@@ -661,10 +661,16 @@ int myMain(int argc, char *argv[], char* exec_type)
 
 int main(int argc, char *argv[])
 {
+	printf("Static\n");
 	myMain(argc, argv, "static");
-	myMain(argc, argv, "dynamic");
-	myMain(argc, argv, "guided");
 
+	printf("Dynamic\n");
+	myMain(argc, argv, "dynamic");
+	
+	printf("Guided\n");
+	myMain(argc, argv, "guided");
+	
+	printf("Serial\n");
 	myMain(argc, argv, "serial");
 
 	return 0;
