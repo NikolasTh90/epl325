@@ -118,7 +118,7 @@ void initiateSystem(char* fileName){
 // 				if(dx<md && dy<md && dz<md){
 // 					//Swap Velocities
 					
-// 					// Change i with j
+// 					// Store the swap
 // 					velocity_swaps[i][step++] = j;
 // 				}
 // 			}
@@ -192,7 +192,7 @@ void resolveCollisions(char* exec_type)
 				if(dx<md && dy<md && dz<md){
 					//Swap Velocities
 					
-					// Change i with j
+					// Store the swap
 					velocity_swaps[i][step++] = j;
 				}
 			}
@@ -211,7 +211,7 @@ void resolveCollisions(char* exec_type)
 				if(dx<md && dy<md && dz<md){
 					//Swap Velocities
 					
-					// Change i with j
+					// Store the swap
 					velocity_swaps[i][step++] = j;
 				}
 			}
@@ -230,7 +230,7 @@ void resolveCollisions(char* exec_type)
 				if(dx<md && dy<md && dz<md){
 					//Swap Velocities
 					
-					// Change i with j
+					// Store the swap
 					velocity_swaps[i][step++] = j;
 				}
 			}
