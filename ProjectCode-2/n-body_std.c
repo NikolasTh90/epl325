@@ -675,9 +675,9 @@ int main(int argc, char *argv[])
 	myMain(argc, argv, "guided");
 
 	
-	printf("Serial\n");
-	fflush(stdout);
-	myMain(argc, argv, "serial");
+	// printf("Serial\n");
+	// fflush(stdout);
+	// myMain(argc, argv, "serial");
 
 	return 0;
 }

@@ -34,11 +34,14 @@ def get_simulation_times():
 from time import *
 times = list()
 for o_flag in (0,3):
-    for threads in range(1,3):
+    for threads in range(1,41):
         print('Creating O' + str(o_flag) + ' with ' + str(threads) + ' threads')
         create_sbatch(o_flag=o_flag, number_of_threads=threads)
         submit_sbatch()
-        sleep(45)
+        if o_flag == 0:
+            sleep(35)
+        else:
+            sleep(25)
         times.append([str(o_flag) + ',' + str(threads)] + get_simulation_times())
 
 # create_sbatch()
@@ -51,7 +54,7 @@ for o_flag in (0,3):
 # print(times)
 
 with open('times.csv', 'w') as timesfile:
-    timesfile.write('\"O flag\", threads, static, dynamic, guided, serial\n')
+    timesfile.write('\"O flag\", threads, static, dynamic, guided\n')
     for sbatch_try in times:
         for record in sbatch_try:
             timesfile.write(record + ',')
