@@ -105,7 +105,7 @@ void resolveCollisions_static(int nthreads){
 	int i,j;
 	double dx,dy,dz,md;
 	int velocity_swaps[bodies-1][bodies];
-	# pragma omp parallel private(i,j,dx,dy,dz,md) shared(bodies,masses,positions,swaps,velocities,nthreads) default(none)
+	# pragma omp parallel private(i,j,dx,dy,dz,md) shared(bodies,masses,positions,velocity_swaps,velocities,nthreads) default(none)
 	{
 		# pragma omp for schedule(static, bodies/nthreads)
 		for(i=0;i<bodies-1;i++){
@@ -178,7 +178,7 @@ void resolveCollisions(char* exec_type)
 
 
 
-	# pragma omp parallel private(i,j,dx,dy,dz,md) shared(bodies,masses,positions,swaps,velocities,nthreads) default(none)
+	# pragma omp parallel private(i,j,dx,dy,dz,md) shared(bodies,masses,positions,velocity_swaps,velocities,nthreads) default(none)
 	{
 	if (strcmp(exec_type, "static") == 0){
 		# pragma omp for schedule(static, bodies/nthreads)
