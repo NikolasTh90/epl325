@@ -178,7 +178,7 @@ void resolveCollisions(char* exec_type)
 
 
 
-	# pragma omp parallel private(i,j,dx,dy,dz,md) shared(bodies,masses,positions,velocity_swaps,velocities,threads) default(none)
+	# pragma omp parallel private(i,j,dx,dy,dz,md) shared(bodies,masses,positions,velocity_swaps,velocities,threads, exec_type) default(none)
 	{
 	if (strcmp(exec_type, "static") == 0){
 		# pragma omp for schedule(static, bodies/threads)
