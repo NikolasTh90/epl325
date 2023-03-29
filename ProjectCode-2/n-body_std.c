@@ -445,7 +445,7 @@ void computeVelocities(char* exec_type)
 
 void computePositions(char* exec_type)
 {
-	// int i;
+	int i;
 	// if (strcmp(exec_type, "static") == 0)
 	// {
 	// 	#pragma omp parallel private(i) default(none) shared(accelerations, velocities, positions, threads, bodies)
