@@ -19,8 +19,10 @@ Code Ref:https://rosettacode.org/wiki/N-body_problem#C
 #include<stdio.h>
 #include<math.h>
 #include"support.h"
+#include <pthread.h>
+
 // Chnage this value to reflect your ID number
-#define ID 123456
+#define ID 1030496
 typedef struct{
 	double x,y,z;
 }vector;
@@ -28,6 +30,8 @@ typedef struct{
 int bodies,timeSteps;
 int SimulationTime = 0;
 double *masses,GravConstant;
+int thread_count = 0;
+
 vector *positions,*velocities,*accelerations;
 /*
 vector addVectors(vector a,vector b){
@@ -117,24 +121,75 @@ void resolveCollisions(){
 		}
 }
 
-void computeAccelerations(){
-	int i,j;
-	for(i=0;i<bodies;i++){
-		accelerations[i].x = 0;	accelerations[i].y = 0; accelerations[i].z = 0;
-		for(j=0;j<bodies;j++){
-			if(i!=j){
-				//accelerations[i] = addVectors(accelerations[i],scaleVector(GravConstant*masses[j]/pow(mod(subtractVectors(positions[i],positions[j])),3),subtractVectors(positions[j],positions[i])));
-				vector sij = {positions[i].x-positions[j].x,positions[i].y-positions[j].y,positions[i].z-positions[j].z};
-				vector sji = {positions[j].x-positions[i].x,positions[j].y-positions[i].y,positions[j].z-positions[i].z};
-				double mod = sqrt(sij.x*sij.x + sij.y*sij.y + sij.z*sij.z);
-				double mod3 = mod * mod * mod;
-				double s = GravConstant*masses[j]/mod3;
-				vector S = {s*sji.x,s*sji.y,s*sji.z};
-				accelerations[i].x+=S.x;accelerations[i].y+=S.y;accelerations[i].z+=S.z;
-			}
-		}
-	}
+
+void* computeAccelerations_worker(void* arg);
+
+void computeAccelerations(char* exec_type)
+{
+    int i, j;
+    pthread_t* threads;
+    int rc;
+
+    // Allocate memory for the threads
+    threads = (pthread_t*) malloc(threads * sizeof(pthread_t));
+
+    // Create the threads
+    for (int t = 0; t < threads t++) {
+        rc = pthread_create(&threads[t], NULL, computeAccelerations_worker, (void*) t);
+        if (rc) {
+            printf("Error: return code from pthread_create() is %d\n", rc);
+            exit(-1);
+        }
+    }
+
+    // Wait for the threads to finish
+    for (int t = 0; t < thread_count; t++) {
+        rc = pthread_join(threads[t], NULL);
+        if (rc) {
+            printf("Error: return code from pthread_join() is %d\n", rc);
+            exit(-1);
+        }
+    }
+
+    free(threads);
 }
+
+void* computeAccelerations_worker(void* arg)
+{
+    int tid = (int) arg;
+    int i, j;
+    int start, end;
+
+    // Divide the work among the threads
+    start = tid * bodies / thread_count;
+    end = (tid + 1) * bodies / thread_count;
+
+    for (i = start; i < end; i++)
+    {
+        accelerations[i].x = 0;
+        accelerations[i].y = 0;
+        accelerations[i].z = 0;
+
+        for (j = 0; j < bodies; j++)
+        {
+            if (i != j)
+            {
+                vector sij = {positions[i].x - positions[j].x, positions[i].y - positions[j].y, positions[i].z - positions[j].z};
+                vector sji = {positions[j].x - positions[i].x, positions[j].y - positions[i].y, positions[j].z - positions[i].z};
+                double mod = sqrt(sij.x * sij.x + sij.y * sij.y + sij.z * sij.z);
+                double mod3 = mod * mod * mod;
+                double s = GravConstant * masses[j] / mod3;
+                vector S = {s * sji.x, s * sji.y, s * sji.z};
+                accelerations[i].x += S.x;
+                accelerations[i].y += S.y;
+                accelerations[i].z += S.z;
+            }
+        }
+    }
+
+    pthread_exit(NULL);
+}
+
 
 void computeVelocities(){
 	int i;
@@ -195,7 +250,7 @@ int myMain(int argc, char *argv[], char* exec_type)
 	if(argc == 3){
 		timeSteps = atoi(argv[1]);
 		bodies = atoi(argv[2]);
-		threads = 1;
+		thread_count = 1;
 		printf("%%*** RUNNING WITH VALUES %d timesteps %d bodies and %d thread(s) ***\n",timeSteps, bodies, threads);
 
 	}
@@ -204,7 +259,7 @@ int myMain(int argc, char *argv[], char* exec_type)
 	{
 		timeSteps = atoi(argv[1]);
 		bodies = atoi(argv[2]);
-		threads = atoi(argv[3]);
+		thread_count = atoi(argv[3]);
 		printf("%%*** RUNNING WITH VALUES %d timesteps %d bodies and %d thread(s) ***\n",timeSteps, bodies, threads);
 
 	}
@@ -212,7 +267,7 @@ int myMain(int argc, char *argv[], char* exec_type)
 	if (argc == 2){
 		timeSteps = 10000;
 		bodies = 200;
-		threads = atoi(argv[1]);
+		thread_count = atoi(argv[1]);
 		printf("%%*** RUNNING WITH DEFAULT VALUES %d timesteps %d bodies and %d thread(s) ***\n",timeSteps, bodies, threads);
 
 		
@@ -222,7 +277,7 @@ int myMain(int argc, char *argv[], char* exec_type)
 	{
 		timeSteps = 10000;
 		bodies = 200;
-		threads = 1;
+		thread_count = 1;
 		printf("%%*** RUNNING WITH DEFAULT VALUES %d timesteps %d bodies and %d thread(s) ***\n",timeSteps, bodies, threads);
 
 	}
@@ -237,13 +292,10 @@ int myMain(int argc, char *argv[], char* exec_type)
 	for (i = 0; i < timeSteps; i++)
 	{
 			if(strcmp(exec_type, "static") == 0)
-				n_body_omp_static(threads);
+				n_body_omp_static(thread_count);
 			else	
 				if(strcmp(exec_type, "dynamic") == 0)
-					n_body_omp_dynamic(threads);
-			else		
-				if(strcmp(exec_type, "guided") == 0)
-					n_body_omp_guided(threads);		
+					n_body_omp_dynamic(thread_count);	
 			else
 				simulate();
 		
