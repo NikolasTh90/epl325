@@ -388,49 +388,49 @@ void computeAccelerations(char* exec_type)
 void computeVelocities(char* exec_type)
 {
 	int i;
-	if(strcmp(exec_type, "static") == 0)
-	{
-		#pragma omp parallel private(i) default(none) shared(accelerations, velocities, threads, bodies)
-		{
-			#pragma omp for schedule(static, bodies/threads)
-				for (i = 0; i < bodies; i++)
-				{
-					// velocities[i] = addVectors(velocities[i],accelerations[i]);
-					vector ac = {velocities[i].x + accelerations[i].x, velocities[i].y + accelerations[i].y, velocities[i].z + accelerations[i].z};
-					velocities[i] = ac;
-				}
-		}
-	}
-	else if (strcmp(exec_type,"dynamic") == 0)
-	{
-		#pragma omp parallel private(i) default(none) shared(accelerations, velocities, threads, bodies)
-		{
-			#pragma omp for schedule(dynamic)
-				for (i = 0; i < bodies; i++)
-				{
-					// velocities[i] = addVectors(velocities[i],accelerations[i]);
-					vector ac = {velocities[i].x + accelerations[i].x, velocities[i].y + accelerations[i].y, velocities[i].z + accelerations[i].z};
-					velocities[i] = ac;
-				}
-		}
-	}
-	else if (strcmp(exec_type,"guided") == 0)
-	{
-		#pragma omp parallel private(i) default(none) shared(accelerations, velocities, threads, bodies)
-		{
-			#pragma omp for schedule(guided)
+	// if(strcmp(exec_type, "static") == 0)
+	// {
+	// 	#pragma omp parallel private(i) default(none) shared(accelerations, velocities, threads, bodies)
+	// 	{
+	// 		#pragma omp for schedule(static, bodies/threads)
+	// 			for (i = 0; i < bodies; i++)
+	// 			{
+	// 				// velocities[i] = addVectors(velocities[i],accelerations[i]);
+	// 				vector ac = {velocities[i].x + accelerations[i].x, velocities[i].y + accelerations[i].y, velocities[i].z + accelerations[i].z};
+	// 				velocities[i] = ac;
+	// 			}
+	// 	}
+	// }
+	// else if (strcmp(exec_type,"dynamic") == 0)
+	// {
+	// 	#pragma omp parallel private(i) default(none) shared(accelerations, velocities, threads, bodies)
+	// 	{
+	// 		#pragma omp for schedule(dynamic)
+	// 			for (i = 0; i < bodies; i++)
+	// 			{
+	// 				// velocities[i] = addVectors(velocities[i],accelerations[i]);
+	// 				vector ac = {velocities[i].x + accelerations[i].x, velocities[i].y + accelerations[i].y, velocities[i].z + accelerations[i].z};
+	// 				velocities[i] = ac;
+	// 			}
+	// 	}
+	// }
+	// else if (strcmp(exec_type,"guided") == 0)
+	// {
+	// 	#pragma omp parallel private(i) default(none) shared(accelerations, velocities, threads, bodies)
+	// 	{
+	// 		#pragma omp for schedule(guided)
 			 
-				for (i = 0; i < bodies; i++)
-				{
-					// velocities[i] = addVectors(velocities[i],accelerations[i]);
-					vector ac = {velocities[i].x + accelerations[i].x, velocities[i].y + accelerations[i].y, velocities[i].z + accelerations[i].z};
-					velocities[i] = ac;
-				}
+	// 			for (i = 0; i < bodies; i++)
+	// 			{
+	// 				// velocities[i] = addVectors(velocities[i],accelerations[i]);
+	// 				vector ac = {velocities[i].x + accelerations[i].x, velocities[i].y + accelerations[i].y, velocities[i].z + accelerations[i].z};
+	// 				velocities[i] = ac;
+	// 			}
 			
-		}
-	}
-	else
-	{
+	// 	}
+	// }
+	// else
+	// {
 		for (i = 0; i < bodies; i++)
 		{
 			// velocities[i] = addVectors(velocities[i],accelerations[i]);
@@ -438,66 +438,66 @@ void computeVelocities(char* exec_type)
 			velocities[i] = ac;
 		}
 			
-	}
+	// }
 
 
 }
 
 void computePositions(char* exec_type)
 {
-	int i;
-	if (strcmp(exec_type, "static") == 0)
-	{
-		#pragma omp parallel private(i) default(none) shared(accelerations, velocities, positions, threads, bodies)
-		{
-			#pragma omp for schedule(static, bodies/threads)
+	// int i;
+	// if (strcmp(exec_type, "static") == 0)
+	// {
+	// 	#pragma omp parallel private(i) default(none) shared(accelerations, velocities, positions, threads, bodies)
+	// 	{
+	// 		#pragma omp for schedule(static, bodies/threads)
 			
-				for (i = 0; i < bodies; i++)
-				{
-					// positions[i] = addVectors(positions[i],addVectors(velocities[i],scaleVector(0.5,accelerations[i])));
-					vector sc = {0.5 * accelerations[i].x, 0.5 * accelerations[i].y, 0.5 * accelerations[i].z};
-					vector ac = {velocities[i].x + sc.x, velocities[i].y + sc.y, velocities[i].z + sc.z};
-					vector bc = {positions[i].x + ac.x, positions[i].y + ac.y, positions[i].z + ac.z};
-					positions[i] = bc;
-				}
+	// 			for (i = 0; i < bodies; i++)
+	// 			{
+	// 				// positions[i] = addVectors(positions[i],addVectors(velocities[i],scaleVector(0.5,accelerations[i])));
+	// 				vector sc = {0.5 * accelerations[i].x, 0.5 * accelerations[i].y, 0.5 * accelerations[i].z};
+	// 				vector ac = {velocities[i].x + sc.x, velocities[i].y + sc.y, velocities[i].z + sc.z};
+	// 				vector bc = {positions[i].x + ac.x, positions[i].y + ac.y, positions[i].z + ac.z};
+	// 				positions[i] = bc;
+	// 			}
 				
-		}	
-	}
-	else if (strcmp(exec_type, "dynamic") == 0)
-	{
-		#pragma omp parallel private(i) default(none) shared(accelerations, velocities, positions, threads, bodies)
-		{
-			#pragma omp for schedule(dynamic)
+	// 	}	
+	// }
+	// else if (strcmp(exec_type, "dynamic") == 0)
+	// {
+	// 	#pragma omp parallel private(i) default(none) shared(accelerations, velocities, positions, threads, bodies)
+	// 	{
+	// 		#pragma omp for schedule(dynamic)
 			
-				for (i = 0; i < bodies; i++)
-				{
-					// positions[i] = addVectors(positions[i],addVectors(velocities[i],scaleVector(0.5,accelerations[i])));
-					vector sc = {0.5 * accelerations[i].x, 0.5 * accelerations[i].y, 0.5 * accelerations[i].z};
-					vector ac = {velocities[i].x + sc.x, velocities[i].y + sc.y, velocities[i].z + sc.z};
-					vector bc = {positions[i].x + ac.x, positions[i].y + ac.y, positions[i].z + ac.z};
-					positions[i] = bc;
-				}
+	// 			for (i = 0; i < bodies; i++)
+	// 			{
+	// 				// positions[i] = addVectors(positions[i],addVectors(velocities[i],scaleVector(0.5,accelerations[i])));
+	// 				vector sc = {0.5 * accelerations[i].x, 0.5 * accelerations[i].y, 0.5 * accelerations[i].z};
+	// 				vector ac = {velocities[i].x + sc.x, velocities[i].y + sc.y, velocities[i].z + sc.z};
+	// 				vector bc = {positions[i].x + ac.x, positions[i].y + ac.y, positions[i].z + ac.z};
+	// 				positions[i] = bc;
+	// 			}
 				
-		}	
-	}
-	else if (strcmp(exec_type, "guided") == 0)
-	{
-		#pragma omp parallel private(i) default(none) shared(accelerations, velocities, positions, threads, bodies)
-		{
-			#pragma omp for schedule(guided)
+	// 	}	
+	// }
+	// else if (strcmp(exec_type, "guided") == 0)
+	// {
+	// 	#pragma omp parallel private(i) default(none) shared(accelerations, velocities, positions, threads, bodies)
+	// 	{
+	// 		#pragma omp for schedule(guided)
 			
-				for (i = 0; i < bodies; i++)
-				{
-					// positions[i] = addVectors(positions[i],addVectors(velocities[i],scaleVector(0.5,accelerations[i])));
-					vector sc = {0.5 * accelerations[i].x, 0.5 * accelerations[i].y, 0.5 * accelerations[i].z};
-					vector ac = {velocities[i].x + sc.x, velocities[i].y + sc.y, velocities[i].z + sc.z};
-					vector bc = {positions[i].x + ac.x, positions[i].y + ac.y, positions[i].z + ac.z};
-					positions[i] = bc;
-				}
+	// 			for (i = 0; i < bodies; i++)
+	// 			{
+	// 				// positions[i] = addVectors(positions[i],addVectors(velocities[i],scaleVector(0.5,accelerations[i])));
+	// 				vector sc = {0.5 * accelerations[i].x, 0.5 * accelerations[i].y, 0.5 * accelerations[i].z};
+	// 				vector ac = {velocities[i].x + sc.x, velocities[i].y + sc.y, velocities[i].z + sc.z};
+	// 				vector bc = {positions[i].x + ac.x, positions[i].y + ac.y, positions[i].z + ac.z};
+	// 				positions[i] = bc;
+	// 			}
 				
-		}	
-	}
-	else
+	// 	}	
+	// }
+	// else
 	for (i = 0; i < bodies; i++)
 	{
 		// positions[i] = addVectors(positions[i],addVectors(velocities[i],scaleVector(0.5,accelerations[i])));
