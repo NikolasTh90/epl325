@@ -20,9 +20,13 @@ Code Ref:https://rosettacode.org/wiki/N-body_problem#C
 #include<math.h>
 #include"support.h"
 #include <pthread.h>
+#include <string.h>
+#include <assert.h>
+
 
 // Chnage this value to reflect your ID number
 #define ID 1030496
+#define CHUNK_SIZE 50
 typedef struct{
 	double x,y,z;
 }vector;
@@ -31,6 +35,9 @@ int bodies,timeSteps;
 int SimulationTime = 0;
 double *masses,GravConstant;
 int thread_count = 0;
+int Gstart = 0;
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
 
 vector *positions,*velocities,*accelerations;
 /*
@@ -122,48 +129,108 @@ void resolveCollisions(){
 }
 
 
-void* computeAccelerations_worker(void* arg);
+void computeAccelerations_staticWorker(void* arg);
+void computeAccelerations_dynamicWorker(void* arg){
+	while(Gstart <= bodies){
+		pthread_mutex_lock(&mutex);
+		if(Gstart > bodies)
+			return;
+		int myStart = Gstart;
+	    int myEnd = myStart+CHUNK_SIZE;
+		if(myEnd > bodies){
+			myEnd = bodies;
+        }
+		Gstart = myEnd+1;
+		pthread_mutex_unlock(&mutex);
+        
+	}
+}
 
 void computeAccelerations(char* exec_type)
 {
     int i, j;
-    pthread_t* threads;
-    int rc;
+	if (strcmp(exec_type,"static")==0){
+		pthread_t* threads;
+		// int rc;
 
-    // Allocate memory for the threads
-    threads = (pthread_t*) malloc(threads * sizeof(pthread_t));
+		// Allocate memory for the threads
+		threads = (pthread_t*) malloc(thread_count * sizeof(pthread_t));
+		int threads_id[thread_count];
+		// Create the threads
+		for (int t = 0; t < thread_count; t++) {
+			threads_id[t] = t; 
+			assert(pthread_create(&threads[t], NULL, (void*) computeAccelerations_staticWorker, (void*) &threads_id[t]) == 0);
+			
+		}
 
-    // Create the threads
-    for (int t = 0; t < threads t++) {
-        rc = pthread_create(&threads[t], NULL, computeAccelerations_worker, (void*) t);
-        if (rc) {
-            printf("Error: return code from pthread_create() is %d\n", rc);
-            exit(-1);
-        }
-    }
+		// Wait for the threads to finish
+		for (int t = 0; t < thread_count; t++) {
+			assert(pthread_join(threads[t], NULL) == 0);
+			
+		}
 
-    // Wait for the threads to finish
-    for (int t = 0; t < thread_count; t++) {
-        rc = pthread_join(threads[t], NULL);
-        if (rc) {
-            printf("Error: return code from pthread_join() is %d\n", rc);
-            exit(-1);
-        }
-    }
+   	 free(threads);
+	}
+	else if (strcmp(exec_type,"dynamic") == 0) {
+		pthread_t threads[thread_count];
+		int threads_id[thread_count];
+			// Create the threads
+		for (int t = 0; t < thread_count; t++) {
+			threads_id[t] = t; 
+			assert(pthread_create(&threads[t], NULL, (void*) computeAccelerations_dynamicWorker, (void*) &threads_id[t]) == 0);
+			
+		}
 
-    free(threads);
+		// Wait for the threads to finish
+		for (int t = 0; t < thread_count; t++) {
+			assert(pthread_join(threads[t], NULL) == 0);
+			
+		}
+
+	}
+	else{
+		for (i = 0; i < bodies; i++)
+		{
+			accelerations[i].x = 0;
+			accelerations[i].y = 0;
+			accelerations[i].z = 0;
+		// #pragma omp parallel for schedule(static)
+			for (j = 0; j < bodies; j++)
+			{
+				if (i != j)
+				{
+					// accelerations[i] = addVectors(accelerations[i],scaleVector(GravConstant*masses[j]/pow(mod(subtractVectors(positions[i],positions[j])),3),subtractVectors(positions[j],positions[i])));
+					vector sij = {positions[i].x - positions[j].x, positions[i].y - positions[j].y, positions[i].z - positions[j].z};
+					vector sji = {positions[j].x - positions[i].x, positions[j].y - positions[i].y, positions[j].z - positions[i].z};
+					double mod = sqrt(sij.x * sij.x + sij.y * sij.y + sij.z * sij.z);
+					double mod3 = mod * mod * mod;
+					double s = GravConstant * masses[j] / mod3;
+					vector S = {s * sji.x, s * sji.y, s * sji.z};
+					accelerations[i].x += S.x;
+					accelerations[i].y += S.y;
+					accelerations[i].z += S.z;
+				}
+			}
+		}
+
+	
+	}
 }
 
-void* computeAccelerations_worker(void* arg)
+void computeAccelerations_staticWorker(void* arg)
 {
-    int tid = (int) arg;
     int i, j;
     int start, end;
+	int tid = *((int*)arg);
 
     // Divide the work among the threads
     start = tid * bodies / thread_count;
-    end = (tid + 1) * bodies / thread_count;
-
+    end = (tid == thread_count-1) ? bodies : (tid + 1) * bodies / thread_count;
+	if(start<0 || end < 0){
+	    printf("Error in computeAccelerations_staticWorker in thread %d\n", tid);
+		fflush(stdout);
+		exit(-1);
+	}
     for (i = start; i < end; i++)
     {
         accelerations[i].x = 0;
@@ -211,9 +278,22 @@ void computePositions(){
 	}
 }
 
+
+void n_body_pThreads_static(int threads)
+{
+	SimulationTime++;
+	char* execution_type = "static";
+
+	computeAccelerations(execution_type);
+	computePositions();
+	computeVelocities();
+	resolveCollisions();
+}
+
 void simulate(){
 	SimulationTime++;
-	computeAccelerations();
+	char* execution_type = "serial";
+	computeAccelerations(execution_type);
 	computePositions();
 	computeVelocities();
 	resolveCollisions();
@@ -251,7 +331,7 @@ int myMain(int argc, char *argv[], char* exec_type)
 		timeSteps = atoi(argv[1]);
 		bodies = atoi(argv[2]);
 		thread_count = 1;
-		printf("%%*** RUNNING WITH VALUES %d timesteps %d bodies and %d thread(s) ***\n",timeSteps, bodies, threads);
+		printf("%%*** RUNNING WITH VALUES %d timesteps %d bodies and %d thread(s) ***\n",timeSteps, bodies, thread_count);
 
 	}
 	else
@@ -260,7 +340,7 @@ int myMain(int argc, char *argv[], char* exec_type)
 		timeSteps = atoi(argv[1]);
 		bodies = atoi(argv[2]);
 		thread_count = atoi(argv[3]);
-		printf("%%*** RUNNING WITH VALUES %d timesteps %d bodies and %d thread(s) ***\n",timeSteps, bodies, threads);
+		printf("%%*** RUNNING WITH VALUES %d timesteps %d bodies and %d thread(s) ***\n",timeSteps, bodies, thread_count);
 
 	}
 	else
@@ -268,7 +348,7 @@ int myMain(int argc, char *argv[], char* exec_type)
 		timeSteps = 10000;
 		bodies = 200;
 		thread_count = atoi(argv[1]);
-		printf("%%*** RUNNING WITH DEFAULT VALUES %d timesteps %d bodies and %d thread(s) ***\n",timeSteps, bodies, threads);
+		printf("%%*** RUNNING WITH DEFAULT VALUES %d timesteps %d bodies and %d thread(s) ***\n",timeSteps, bodies, thread_count);
 
 		
 	}
@@ -278,7 +358,7 @@ int myMain(int argc, char *argv[], char* exec_type)
 		timeSteps = 10000;
 		bodies = 200;
 		thread_count = 1;
-		printf("%%*** RUNNING WITH DEFAULT VALUES %d timesteps %d bodies and %d thread(s) ***\n",timeSteps, bodies, threads);
+		printf("%%*** RUNNING WITH DEFAULT VALUES %d timesteps %d bodies and %d thread(s) ***\n",timeSteps, bodies, thread_count);
 
 	}
 	initiateSystemRND(bodies);
@@ -292,10 +372,7 @@ int myMain(int argc, char *argv[], char* exec_type)
 	for (i = 0; i < timeSteps; i++)
 	{
 			if(strcmp(exec_type, "static") == 0)
-				n_body_omp_static(thread_count);
-			else	
-				if(strcmp(exec_type, "dynamic") == 0)
-					n_body_omp_dynamic(thread_count);	
+				n_body_pThreads_static(thread_count);	
 			else
 				simulate();
 		
@@ -322,9 +399,9 @@ int main(int argc, char *argv[])
 	fflush(stdout);
 	myMain(argc, argv, "static");
 
-	printf("Dynamic\n");
+	printf("Serial\n");
 	fflush(stdout);
-	myMain(argc, argv, "dynamic");
+	myMain(argc, argv, "serial");
 
 
 	return 0;
