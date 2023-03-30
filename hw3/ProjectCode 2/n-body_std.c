@@ -26,7 +26,7 @@ Code Ref:https://rosettacode.org/wiki/N-body_problem#C
 
 // Chnage this value to reflect your ID number
 #define ID 1030496
-#define CHUNK_SIZE 50
+#define CHUNK_SIZE 10
 typedef struct{
 	double x,y,z;
 }vector;
@@ -36,7 +36,11 @@ int SimulationTime = 0;
 double *masses,GravConstant;
 int thread_count = 0;
 int Gstart = 0;
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+int** velocities_swaps;
+
+
+
+pthread_mutex_t mutex ;
 
 
 vector *positions,*velocities,*accelerations;
@@ -103,45 +107,147 @@ void initiateSystem(char* fileName){
 	fclose(fp);
 }
 */
-void resolveCollisions(){
+
+void* resolveCollisions_staticWorker(void* args){
+    int tid = *(int*)args;
+    int start, end;
+    // Divide the work among the threads
+    start = tid * bodies / thread_count;
+    end = (tid == thread_count-1) ? bodies : (tid + 1) * bodies / thread_count;
+	int swap_count = 0;
+    int i,j;
+    double dx,dy,dz,md;
+	if(start<0 || end < 0){
+	    printf("Error in computeAccelerations_staticWorker in thread %d\n", tid);
+		fflush(stdout);
+		exit(-1);
+	}
+    for(i=start;i<end-1;i++){
+		swap_count=0;
+        for(j=i+1;j<bodies;j++){
+            md = masses[i]+masses[j];
+            dx = fabs(positions[i].x-positions[j].x);
+            dy = fabs(positions[i].y-positions[j].y);
+            dz = fabs(positions[i].z-positions[j].z);
+            if(dx<md && dy<md && dz<md){
+                // Store the swap
+				velocities_swaps[i][swap_count++] = j;
+            }
+        }
+		if(swap_count< bodies)
+			velocities_swaps[i][swap_count] = -1;
+	}
+	
+    return NULL;
+}
+
+
+
+void resolveCollisions(char* exec_type){
 	int i,j;
 	double dx,dy,dz,md;
-	
-	for(i=0;i<bodies-1;i++)
-		for(j=i+1;j<bodies;j++){
-			md = masses[i]+masses[j];
-			dx = fabs(positions[i].x-positions[j].x);
-			dy = fabs(positions[i].y-positions[j].y);
-			dz = fabs(positions[i].z-positions[j].z);
-			//if(positions[i].x==positions[j].x && positions[i].y==positions[j].y && positions[i].z==positions[j].z){
-			if(dx<md && dy<md && dz<md){
-				//Swap Velocities
-				#ifdef DEBUG
-					fprintf(stderr,"T=%d;%lf:%lf:%lf<->%lf:%lf:%lf",SimulationTime,positions[i].x,positions[i].y,positions[i].z,positions[j].x,positions[j].y,positions[j].z);
-					fprintf(stderr,"[md:%lf::%lf:%lf:%lf]",md,dx,dy,dz);
-					fprintf(stderr,"\tCollision(%d):%d<->%d\n",SimulationTime,i,j);
-				#endif
+	velocities_swaps = (int**)calloc(bodies,sizeof(int*));
+		for(i=0;i<bodies;i++){
+			velocities_swaps[i] = (int*)calloc(bodies,sizeof(int));
+        }
+	pthread_t threads[thread_count];
+	int threads_id[thread_count];
+
+	if(strcmp(exec_type,"static")==0){
+		int t;
+
+
+		for (t = 0; t < thread_count; t++) {
+			threads_id[t] = t;
+            pthread_create(&threads[t], NULL, resolveCollisions_staticWorker, (void*) &threads_id[t]);
+
+		}
+
+		for (t = 0; t < thread_count; t++) {
+            pthread_join(threads[t], NULL);
+        }
+
+		for (i=0; i<bodies-1; i++){
+			j = 0;
+			while(velocities_swaps[i][j] != -1 && j < bodies){
 				vector temp = velocities[i];
-				velocities[i] = velocities[j];
-				velocities[j] = temp;
+				velocities[i] = velocities[velocities_swaps[i][j]];
+				velocities[velocities_swaps[i][j]] = temp;
+				j++;
 			}
 		}
+        
+	}
+	else
+		for(i=0;i<bodies-1;i++)
+			for(j=i+1;j<bodies;j++){
+				md = masses[i]+masses[j];
+				dx = fabs(positions[i].x-positions[j].x);
+				dy = fabs(positions[i].y-positions[j].y);
+				dz = fabs(positions[i].z-positions[j].z);
+				//if(positions[i].x==positions[j].x && positions[i].y==positions[j].y && positions[i].z==positions[j].z){
+				if(dx<md && dy<md && dz<md){
+					//Swap Velocities
+					#ifdef DEBUG
+						fprintf(stderr,"T=%d;%lf:%lf:%lf<->%lf:%lf:%lf",SimulationTime,positions[i].x,positions[i].y,positions[i].z,positions[j].x,positions[j].y,positions[j].z);
+						fprintf(stderr,"[md:%lf::%lf:%lf:%lf]",md,dx,dy,dz);
+						fprintf(stderr,"\tCollision(%d):%d<->%d\n",SimulationTime,i,j);
+					#endif
+					vector temp = velocities[i];
+					velocities[i] = velocities[j];
+					velocities[j] = temp;
+				}
+			}
+
+		for (int i = 0; i < bodies - 1; i++) {
+    		free(velocities_swaps[i]);
+		}
+		free(velocities_swaps);
 }
 
 
 void computeAccelerations_staticWorker(void* arg);
 void computeAccelerations_dynamicWorker(void* arg){
-	while(Gstart <= bodies){
+	// int tid = *(int*)arg;
+	while(Gstart < bodies){
 		pthread_mutex_lock(&mutex);
-		if(Gstart > bodies)
+
+		int start = Gstart;
+		if(start >= bodies)
 			return;
-		int myStart = Gstart;
-	    int myEnd = myStart+CHUNK_SIZE;
-		if(myEnd > bodies){
-			myEnd = bodies;
+	    int end = start+CHUNK_SIZE;
+		if(end > bodies){
+			end = bodies;
         }
-		Gstart = myEnd+1;
+		Gstart = end;
 		pthread_mutex_unlock(&mutex);
+		int i,j;
+
+		for (i = start; i < end; i++)
+    {
+        accelerations[i].x = 0;
+        accelerations[i].y = 0;
+        accelerations[i].z = 0;
+
+       for (j = 0; j < bodies; j++)
+			{
+				if (i != j)
+				{
+					// accelerations[i] = addVectors(accelerations[i],scaleVector(GravConstant*masses[j]/pow(mod(subtractVectors(positions[i],positions[j])),3),subtractVectors(positions[j],positions[i])));
+					vector sij = {positions[i].x - positions[j].x, positions[i].y - positions[j].y, positions[i].z - positions[j].z};
+					vector sji = {positions[j].x - positions[i].x, positions[j].y - positions[i].y, positions[j].z - positions[i].z};
+					double mod = sqrt(sij.x * sij.x + sij.y * sij.y + sij.z * sij.z);
+					double mod3 = mod * mod * mod;
+					double s = GravConstant * masses[j] / mod3;
+					vector S = {s * sji.x, s * sji.y, s * sji.z};
+					accelerations[i].x += S.x;
+					accelerations[i].y += S.y;
+					accelerations[i].z += S.z;
+				}
+			}
+    }
+
+
         
 	}
 }
@@ -150,11 +256,11 @@ void computeAccelerations(char* exec_type)
 {
     int i, j;
 	if (strcmp(exec_type,"static")==0){
-		pthread_t* threads;
+		pthread_t threads[thread_count];
 		// int rc;
 
 		// Allocate memory for the threads
-		threads = (pthread_t*) malloc(thread_count * sizeof(pthread_t));
+
 		int threads_id[thread_count];
 		// Create the threads
 		for (int t = 0; t < thread_count; t++) {
@@ -169,7 +275,6 @@ void computeAccelerations(char* exec_type)
 			
 		}
 
-   	 free(threads);
 	}
 	else if (strcmp(exec_type,"dynamic") == 0) {
 		pthread_t threads[thread_count];
@@ -281,13 +386,28 @@ void computePositions(){
 
 void n_body_pThreads_static(int threads)
 {
+	// thread_count = 4;
 	SimulationTime++;
 	char* execution_type = "static";
 
 	computeAccelerations(execution_type);
 	computePositions();
 	computeVelocities();
-	resolveCollisions();
+	execution_type = "serial";
+
+	resolveCollisions(execution_type);
+}
+
+
+void n_body_pThreads_dynamic(int threads)
+{
+	SimulationTime++;
+	char* execution_type = "dynamic";
+	Gstart=0;
+	computeAccelerations(execution_type);
+	computePositions();
+	computeVelocities();
+	resolveCollisions(execution_type);
 }
 
 void simulate(){
@@ -296,7 +416,7 @@ void simulate(){
 	computeAccelerations(execution_type);
 	computePositions();
 	computeVelocities();
-	resolveCollisions();
+	resolveCollisions(execution_type);
 }
 
 void printBodiesInfo(FILE* lfp, FILE* dfp){
@@ -372,7 +492,9 @@ int myMain(int argc, char *argv[], char* exec_type)
 	for (i = 0; i < timeSteps; i++)
 	{
 			if(strcmp(exec_type, "static") == 0)
-				n_body_pThreads_static(thread_count);	
+				n_body_pThreads_static(thread_count);
+			else if(strcmp(exec_type, "dynamic") == 0)
+				n_body_pThreads_dynamic(thread_count);
 			else
 				simulate();
 		
@@ -395,13 +517,19 @@ int myMain(int argc, char *argv[], char* exec_type)
 
 int main(int argc, char *argv[])
 {
+	pthread_mutex_init(&mutex, NULL);
 	printf("Static\n");	
 	fflush(stdout);
-	myMain(argc, argv, "static");
+	// myMain(argc, argv, "static");
+
+
+	printf("Dynamic\n");	
+	fflush(stdout);
+	myMain(argc, argv, "dynamic");
 
 	printf("Serial\n");
 	fflush(stdout);
-	myMain(argc, argv, "serial");
+	// myMain(argc, argv, "serial");
 
 
 	return 0;
