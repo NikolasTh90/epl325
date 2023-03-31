@@ -46,6 +46,7 @@ for o_flag in (0,3):
         print('Creating O' + str(o_flag) + ' with ' + str(threads) + ' threads')
         create_sbatch(o_flag=o_flag, number_of_threads=threads)
         submit_sbatch()
+        f = open('output.txt', 'w+')
         while not finished():
             sleep(1)
             
