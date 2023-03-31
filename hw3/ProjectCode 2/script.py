@@ -42,10 +42,12 @@ from time import *
 times = list()
 for o_flag in (0,3):
     for threads in range(1,41):
+        f = open('output.txt', 'w+')
+        f.close()
         print('Creating O' + str(o_flag) + ' with ' + str(threads) + ' threads')
         create_sbatch(o_flag=o_flag, number_of_threads=threads)
         submit_sbatch()
-        f = open('output.txt', 'w+')
+
 
         while not finished():
             sleep(1)
