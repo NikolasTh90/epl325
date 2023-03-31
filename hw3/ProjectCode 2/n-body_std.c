@@ -22,11 +22,12 @@ Code Ref:https://rosettacode.org/wiki/N-body_problem#C
 #include <pthread.h>
 #include <string.h>
 #include <assert.h>
+#include <unistd.h>
 
 
 // Chnage this value to reflect your ID number
 #define ID 1030496
-#define CHUNK_SIZE 10
+#define CHUNK_SIZE 5
 typedef struct{
 	double x,y,z;
 }vector;
@@ -122,7 +123,7 @@ void* resolveCollisions_staticWorker(void* args){
 		fflush(stdout);
 		exit(-1);
 	}
-    for(i=start;i<end-1;i++){
+    for(i=start;i<end;i++){
 		swap_count=0;
         for(j=i+1;j<bodies;j++){
             md = masses[i]+masses[j];
@@ -167,7 +168,7 @@ void resolveCollisions(char* exec_type){
             pthread_join(threads[t], NULL);
         }
 
-		for (i=0; i<bodies-1; i++){
+		for (i=0; i<bodies; i++){
 			j = 0;
 			while(velocities_swaps[i][j] != -1 && j < bodies){
 				vector temp = velocities[i];
@@ -199,7 +200,7 @@ void resolveCollisions(char* exec_type){
 				}
 			}
 
-		for (int i = 0; i < bodies - 1; i++) {
+		for (int i = 0; i < bodies; i++) {
     		free(velocities_swaps[i]);
 		}
 		free(velocities_swaps);
@@ -209,19 +210,28 @@ void resolveCollisions(char* exec_type){
 void computeAccelerations_staticWorker(void* arg);
 void computeAccelerations_dynamicWorker(void* arg){
 	// int tid = *(int*)arg;
+	int start = -1, end = -1;
+	int i,j;
+
+
 	while(Gstart < bodies){
+
 		pthread_mutex_lock(&mutex);
 
-		int start = Gstart;
-		if(start >= bodies)
+		start = Gstart;
+		if(start >= bodies){
+			pthread_mutex_unlock(&mutex);
 			return;
-	    int end = start+CHUNK_SIZE;
+		}
+	    end = start+CHUNK_SIZE;
 		if(end > bodies){
 			end = bodies;
         }
 		Gstart = end;
+		// printf("end %d\n",Gstart);
+		// fflush(stdout);
 		pthread_mutex_unlock(&mutex);
-		int i,j;
+
 
 		for (i = start; i < end; i++)
     {
@@ -286,11 +296,15 @@ void computeAccelerations(char* exec_type)
 			
 		}
 
+
+		// printf("before waiting\n");
+		// fflush(stdout);
 		// Wait for the threads to finish
 		for (int t = 0; t < thread_count; t++) {
 			assert(pthread_join(threads[t], NULL) == 0);
 			
 		}
+
 
 	}
 	else{
@@ -393,7 +407,7 @@ void n_body_pThreads_static(int threads)
 	computeAccelerations(execution_type);
 	computePositions();
 	computeVelocities();
-	execution_type = "serial";
+	// execution_type = "serial";
 
 	resolveCollisions(execution_type);
 }
@@ -403,7 +417,10 @@ void n_body_pThreads_dynamic(int threads)
 {
 	SimulationTime++;
 	char* execution_type = "dynamic";
+	pthread_mutex_lock(&mutex);
 	Gstart=0;
+	pthread_mutex_unlock(&mutex);
+
 	computeAccelerations(execution_type);
 	computePositions();
 	computeVelocities();
@@ -491,6 +508,7 @@ int myMain(int argc, char *argv[], char* exec_type)
 	startTime(0);
 	for (i = 0; i < timeSteps; i++)
 	{
+
 			if(strcmp(exec_type, "static") == 0)
 				n_body_pThreads_static(thread_count);
 			else if(strcmp(exec_type, "dynamic") == 0)
@@ -520,12 +538,12 @@ int main(int argc, char *argv[])
 	pthread_mutex_init(&mutex, NULL);
 	printf("Static\n");	
 	fflush(stdout);
-	// myMain(argc, argv, "static");
+	myMain(argc, argv, "static");
 
 
 	printf("Dynamic\n");	
 	fflush(stdout);
-	myMain(argc, argv, "dynamic");
+	// myMain(argc, argv, "dynamic");
 
 	printf("Serial\n");
 	fflush(stdout);

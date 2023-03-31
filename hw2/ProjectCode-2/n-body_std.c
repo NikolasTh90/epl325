@@ -296,7 +296,7 @@ void computeAccelerations(char* exec_type)
 	else if (strcmp(exec_type, "dynamic") == 0) {
 		#pragma omp parallel private(i, j) default(none) shared(accelerations, positions, masses, GravConstant, bodies)
 		{
-		#pragma omp for schedule(dynamic) 
+		#pragma omp for schedule(dynamic, 5) 
 		for (i = 0; i < bodies; i++)
 		{
 			accelerations[i].x = 0;
