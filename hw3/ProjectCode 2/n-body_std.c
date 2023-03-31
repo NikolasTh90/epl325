@@ -109,77 +109,153 @@ void initiateSystem(char* fileName){
 }
 */
 
-void* resolveCollisions_staticWorker(void* args){
-    int tid = *(int*)args;
-    int start, end;
-    // Divide the work among the threads
-    start = tid * bodies / thread_count;
-    end = (tid == thread_count-1) ? bodies : (tid + 1) * bodies / thread_count;
-	int swap_count = 0;
-    int i,j;
-    double dx,dy,dz,md;
-	if(start<0 || end < 0){
-	    printf("Error in computeAccelerations_staticWorker in thread %d\n", tid);
-		fflush(stdout);
-		exit(-1);
-	}
-    for(i=start;i<end;i++){
-		swap_count=0;
-        for(j=i+1;j<bodies;j++){
-            md = masses[i]+masses[j];
-            dx = fabs(positions[i].x-positions[j].x);
-            dy = fabs(positions[i].y-positions[j].y);
-            dz = fabs(positions[i].z-positions[j].z);
-            if(dx<md && dy<md && dz<md){
-                // Store the swap
-				velocities_swaps[i][swap_count++] = j;
-            }
-        }
-		if(swap_count< bodies)
-			velocities_swaps[i][swap_count] = -1;
-	}
+// void* resolveCollisions_staticWorker(void* args){
+//     int tid = *(int*)args;
+//     int start, end;
+//     // Divide the work among the threads
+//     start = tid * bodies / thread_count;
+//     end = (tid == thread_count-1) ? bodies-1 : (tid + 1) * bodies / thread_count;
+// 	int swap_count = 0;
+//     int i,j;
+//     double dx,dy,dz,md;
+// 	if(start<0 || end < 0){
+// 	    printf("Error in computeAccelerations_staticWorker in thread %d\n", tid);
+// 		fflush(stdout);
+// 		exit(-1);
+// 	}
+//     for(i=start;i<end;i++){
+// 		swap_count=0;
+//         for(j=i+1;j<bodies;j++){
+//             md = masses[i]+masses[j];
+//             dx = fabs(positions[i].x-positions[j].x);
+//             dy = fabs(positions[i].y-positions[j].y);
+//             dz = fabs(positions[i].z-positions[j].z);
+//             if(dx<md && dy<md && dz<md){
+//                 // Store the swap
+// 				velocities_swaps[i][swap_count++] = j;
+//             }
+//         }
+// 		if(swap_count< bodies)
+// 			velocities_swaps[i][swap_count] = -1;
+// 	}
 	
-    return NULL;
-}
+//     return NULL;
+// }
 
+// void* resolveCollisions_dynamicWorker(void* args){
+// 	int tid = *(int*)args;
+//     int start, end;
+// 	int i,j;
+// 	double dx,dy,dz,md;
+// 	int swap_count = 0;
+
+
+
+// 	while(Gstart < bodies){
+
+// 		pthread_mutex_lock(&mutex);
+
+// 		start = Gstart;
+// 		if(start >= bodies){
+// 			pthread_mutex_unlock(&mutex);
+// 			return NULL;
+// 		}
+// 	    end = start+CHUNK_SIZE;
+// 		if(end >= bodies){
+// 			end = bodies-1;
+//         }
+// 		Gstart = end;
+// 		// printf("end %d\n",Gstart);
+// 		// fflush(stdout);
+// 		pthread_mutex_unlock(&mutex);
+// 		if(start<0 || end < 0){
+// 			printf("Error in computeAccelerations_dynamicWorker in thread %d\n", tid);
+// 			fflush(stdout);
+// 			exit(-1);
+// 		}
+
+	
+//     for(i=start;i<end;i++){
+// 		swap_count=0;
+//         for(j=i+1;j<bodies;j++){
+//             md = masses[i]+masses[j];
+//             dx = fabs(positions[i].x-positions[j].x);
+//             dy = fabs(positions[i].y-positions[j].y);
+//             dz = fabs(positions[i].z-positions[j].z);
+//             if(dx<md && dy<md && dz<md){
+//                 // Store the swap
+// 				velocities_swaps[i][swap_count++] = j;
+//             }
+//         }
+// 		if(swap_count< bodies)
+// 			velocities_swaps[i][swap_count] = -1;
+// 	}
+// }
+// return NULL;
+// }
 
 
 void resolveCollisions(char* exec_type){
 	int i,j;
 	double dx,dy,dz,md;
-	velocities_swaps = (int**)calloc(bodies,sizeof(int*));
-		for(i=0;i<bodies;i++){
-			velocities_swaps[i] = (int*)calloc(bodies,sizeof(int));
-        }
-	pthread_t threads[thread_count];
-	int threads_id[thread_count];
+	// velocities_swaps = (int**)calloc(bodies,sizeof(int*));
+	// 	for(i=0;i<bodies;i++){
+	// 		velocities_swaps[i] = (int*)calloc(bodies,sizeof(int));
+    //     }
+	// pthread_t threads[thread_count];
+	// int threads_id[thread_count];
 
-	if(strcmp(exec_type,"static")==0){
-		int t;
+	// if(strcmp(exec_type,"static")==0){
+	// 	int t;
 
 
-		for (t = 0; t < thread_count; t++) {
-			threads_id[t] = t;
-            pthread_create(&threads[t], NULL, resolveCollisions_staticWorker, (void*) &threads_id[t]);
+	// 	for (t = 0; t < thread_count; t++) {
+	// 		threads_id[t] = t;
+    //         pthread_create(&threads[t], NULL, resolveCollisions_staticWorker, (void*) &threads_id[t]);
 
-		}
+	// 	}
 
-		for (t = 0; t < thread_count; t++) {
-            pthread_join(threads[t], NULL);
-        }
+	// 	for (t = 0; t < thread_count; t++) {
+    //         pthread_join(threads[t], NULL);
+    //     }
 
-		for (i=0; i<bodies; i++){
-			j = 0;
-			while(velocities_swaps[i][j] != -1 && j < bodies){
-				vector temp = velocities[i];
-				velocities[i] = velocities[velocities_swaps[i][j]];
-				velocities[velocities_swaps[i][j]] = temp;
-				j++;
-			}
-		}
+	// 	for (i=0; i<bodies; i++){
+	// 		j = 0;
+	// 		while(velocities_swaps[i][j] != -1 && j < bodies ){
+	// 			vector temp = velocities[i];
+	// 			velocities[i] = velocities[velocities_swaps[i][j]];
+	// 			velocities[velocities_swaps[i][j]] = temp;
+	// 			j++;
+	// 		}
+	// 	}
         
-	}
-	else
+	// }
+	// if(strcmp(exec_type,"dynamic")==0){
+	// 	int t;
+	// 	Gstart=0;
+
+	// 	for (t = 0; t < thread_count; t++) {
+	// 		threads_id[t] = t;
+    //         pthread_create(&threads[t], NULL, resolveCollisions_dynamicWorker, (void*) &threads_id[t]);
+
+	// 	}
+
+	// 	for (t = 0; t < thread_count; t++) {
+    //         pthread_join(threads[t], NULL);
+    //     }
+
+	// 	for (i=0; i<bodies; i++){
+	// 		j = 0;
+	// 		while(velocities_swaps[i][j] != -1 && j < bodies){
+	// 			vector temp = velocities[i];
+	// 			velocities[i] = velocities[velocities_swaps[i][j]];
+	// 			velocities[velocities_swaps[i][j]] = temp;
+	// 			j++;
+	// 		}
+	// 	}
+        
+	// }
+	// else
 		for(i=0;i<bodies-1;i++)
 			for(j=i+1;j<bodies;j++){
 				md = masses[i]+masses[j];
@@ -200,10 +276,10 @@ void resolveCollisions(char* exec_type){
 				}
 			}
 
-		for (int i = 0; i < bodies; i++) {
-    		free(velocities_swaps[i]);
-		}
-		free(velocities_swaps);
+		// for (int i = 0; i < bodies; i++) {
+    	// 	free(velocities_swaps[i]);
+		// }
+		// free(velocities_swaps);
 }
 
 
@@ -289,7 +365,10 @@ void computeAccelerations(char* exec_type)
 	else if (strcmp(exec_type,"dynamic") == 0) {
 		pthread_t threads[thread_count];
 		int threads_id[thread_count];
+		Gstart=0;
+
 			// Create the threads
+		
 		for (int t = 0; t < thread_count; t++) {
 			threads_id[t] = t; 
 			assert(pthread_create(&threads[t], NULL, (void*) computeAccelerations_dynamicWorker, (void*) &threads_id[t]) == 0);
@@ -417,10 +496,6 @@ void n_body_pThreads_dynamic(int threads)
 {
 	SimulationTime++;
 	char* execution_type = "dynamic";
-	pthread_mutex_lock(&mutex);
-	Gstart=0;
-	pthread_mutex_unlock(&mutex);
-
 	computeAccelerations(execution_type);
 	computePositions();
 	computeVelocities();
@@ -538,15 +613,16 @@ int main(int argc, char *argv[])
 	pthread_mutex_init(&mutex, NULL);
 	printf("Static\n");	
 	fflush(stdout);
+	// thread_count = 4;
 	myMain(argc, argv, "static");
 
 
 	printf("Dynamic\n");	
 	fflush(stdout);
-	// myMain(argc, argv, "dynamic");
+	myMain(argc, argv, "dynamic");
 
-	printf("Serial\n");
-	fflush(stdout);
+	// printf("Serial\n");
+	// fflush(stdout);
 	// myMain(argc, argv, "serial");
 
 

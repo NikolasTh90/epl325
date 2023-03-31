@@ -677,7 +677,7 @@ int main(int argc, char *argv[])
 	
 	printf("Serial\n");
 	fflush(stdout);
-	myMain(argc, argv, "serial");
+	// myMain(argc, argv, "serial");
 
 	return 0;
 }

@@ -26,7 +26,6 @@ def finished():
                 counter+=1
     return True if counter==3 else False
 
-
 def submit_sbatch():
     import subprocess
     output = subprocess.check_output(['sbatch', 'sbatch'])
@@ -48,8 +47,7 @@ for o_flag in (0,3):
         submit_sbatch()
         while not finished():
             sleep(1)
-            
-        sleep(1)
+        sleep(1)    
         times.append([str(o_flag) + ',' + str(threads)] + get_simulation_times())
 
 # create_sbatch()
@@ -62,7 +60,7 @@ for o_flag in (0,3):
 # print(times)
 
 with open('times.csv', 'w') as timesfile:
-    timesfile.write('\"O flag\", threads, static, dynamic, guided\n')
+    timesfile.write('\"O flag\", threads, static, dynamic\n')
     for sbatch_try in times:
         for record in sbatch_try:
             timesfile.write(record + ',')
