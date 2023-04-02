@@ -291,7 +291,7 @@ void computeAccelerations(char* exec_type)
                     ay = _mm512_add_pd(ay, Sy);
                     az = _mm512_add_pd(az, Sz);
                 }
-				else
+				else if( i != j)
 				{
 					double mass = masses[j];
 					double x = positions[j].x - positions[i].x;
@@ -339,7 +339,7 @@ void computeAccelerations(char* exec_type)
                     ay = _mm512_add_pd(ay, Sy);
                     az = _mm512_add_pd(az, Sz);
                 }
-				else
+				else if( i != j)
 				{
 					double mass = masses[j];
 					double x = positions[j].x - positions[i].x;
@@ -387,7 +387,7 @@ void computeAccelerations(char* exec_type)
                     ay = _mm512_add_pd(ay, Sy);
                     az = _mm512_add_pd(az, Sz);
                 }
-				else
+				else if( i != j)
 				{
 					double mass = masses[j];
 					double x = positions[j].x - positions[i].x;
