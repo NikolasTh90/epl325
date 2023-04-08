@@ -447,9 +447,9 @@ int main(int argc, char *argv[])
 	fflush(stdout);
 	myMain(argc, argv, "dynamic");
 
-	printf("Serial\n");
-	fflush(stdout);
-	myMain(argc, argv, "serial");
+	// printf("Serial\n");
+	// fflush(stdout);
+	// myMain(argc, argv, "serial");
 
 	return 0;
 }
