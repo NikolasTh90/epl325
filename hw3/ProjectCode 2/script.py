@@ -24,7 +24,7 @@ def finished():
         for line in output.readlines():
             if line.__contains__('Simulation Time'):
                 counter+=1
-    return True if counter==3 else False
+    return True if counter==2 else False
 
 def submit_sbatch():
     import subprocess
@@ -50,7 +50,7 @@ for o_flag in (0,3):
 
 
         while not finished():
-            pass   
+            sleep(1)   
         times.append([str(o_flag) + ',' + str(threads)] + get_simulation_times())
 
 # create_sbatch()
