@@ -101,54 +101,13 @@ void initiateSystem(char* fileName){
 */
 
 
-// void resolveCollisions_static(int nthreads){
-// 	int i,j;
-// 	double dx,dy,dz,md;
-// 	int velocity_swaps[bodies-1][bodies];
-// 	# pragma omp parallel private(i,j,dx,dy,dz,md) shared(bodies,masses,positions,velocity_swaps,velocities,nthreads) default(none)
-// 	{
-// 		# pragma omp for schedule(static, bodies/nthreads)
-// 		for(i=0;i<bodies-1;i++){
-// 			int step = 0;
-// 			for(j=i+1;j<bodies;j++){
-// 				md = masses[i]+masses[j];
-// 				dx = fabs(positions[i].x-positions[j].x);
-// 				dy = fabs(positions[i].y-positions[j].y);
-// 				dz = fabs(positions[i].z-positions[j].z);
-// 				if(dx<md && dy<md && dz<md){
-// 					//Swap Velocities
-					
-// 					// Store the swap
-// 					velocity_swaps[i][step++] = j;
-// 				}
-// 			}
-// 			velocity_swaps[i][step] = -1;
-// 		}
-// 		# pragma omp barrier
-// 		# pragma omp single
-// 		{	
-// 			for (i=0; i<bodies-1; i++){
-// 				j = 0;
-// 				while(velocity_swaps[i][j] != -1){
-// 					vector temp = velocities[i];
-// 					velocities[i] = velocities[velocity_swaps[i][j]];
-// 					velocities[velocity_swaps[i][j]] = temp;
-// 					j++;
-// 				}
-// 			}
-// 		}
-// 	}
-
-// }
-
-
 
 
 void resolveCollisions(char* exec_type)
 {
 	int i, j;
 	double dx, dy, dz, md;
-	int velocity_swaps[bodies-1][bodies];
+	// int velocity_swaps[bodies-1][bodies];
 
 	if (strcmp(exec_type, "serial") == 0){
 		for (i = 0; i < bodies - 1; i++)
@@ -178,86 +137,86 @@ void resolveCollisions(char* exec_type)
 
 
 
-	# pragma omp parallel private(i,j,dx,dy,dz,md) shared(bodies,masses,positions,velocity_swaps,velocities,threads, exec_type) default(none)
-	{
-	if (strcmp(exec_type, "static") == 0){
-		# pragma omp for schedule(static, bodies/threads)
-		for(i=0;i<bodies-1;i++){
-			int step = 0;
-			for(j=i+1;j<bodies;j++){
-				md = masses[i]+masses[j];
-				dx = fabs(positions[i].x-positions[j].x);
-				dy = fabs(positions[i].y-positions[j].y);
-				dz = fabs(positions[i].z-positions[j].z);
-				if(dx<md && dy<md && dz<md){
-					//Swap Velocities
+	// # pragma omp parallel private(i,j,dx,dy,dz,md) shared(bodies,masses,positions,velocity_swaps,velocities,threads, exec_type) default(none)
+	// {
+	// if (strcmp(exec_type, "static") == 0){
+	// 	# pragma omp for schedule(static, bodies/threads)
+	// 	for(i=0;i<bodies-1;i++){
+	// 		int step = 0;
+	// 		for(j=i+1;j<bodies;j++){
+	// 			md = masses[i]+masses[j];
+	// 			dx = fabs(positions[i].x-positions[j].x);
+	// 			dy = fabs(positions[i].y-positions[j].y);
+	// 			dz = fabs(positions[i].z-positions[j].z);
+	// 			if(dx<md && dy<md && dz<md){
+	// 				//Swap Velocities
 					
-					// Store the swap
-					velocity_swaps[i][step++] = j;
-				}
-			}
-			velocity_swaps[i][step] = -1;
-		}
-	}
-	if(strcmp(exec_type, "dynamic")==0){
-		# pragma omp for schedule(dynamic)
-		for(i=0;i<bodies-1;i++){
-			int step = 0;
-			for(j=i+1;j<bodies;j++){
-				md = masses[i]+masses[j];
-				dx = fabs(positions[i].x-positions[j].x);
-				dy = fabs(positions[i].y-positions[j].y);
-				dz = fabs(positions[i].z-positions[j].z);
-				if(dx<md && dy<md && dz<md){
-					//Swap Velocities
+	// 				// Store the swap
+	// 				velocity_swaps[i][step++] = j;
+	// 			}
+	// 		}
+	// 		velocity_swaps[i][step] = -1;
+	// 	}
+	// }
+	// if(strcmp(exec_type, "dynamic")==0){
+	// 	# pragma omp for schedule(dynamic)
+	// 	for(i=0;i<bodies-1;i++){
+	// 		int step = 0;
+	// 		for(j=i+1;j<bodies;j++){
+	// 			md = masses[i]+masses[j];
+	// 			dx = fabs(positions[i].x-positions[j].x);
+	// 			dy = fabs(positions[i].y-positions[j].y);
+	// 			dz = fabs(positions[i].z-positions[j].z);
+	// 			if(dx<md && dy<md && dz<md){
+	// 				//Swap Velocities
 					
-					// Store the swap
-					velocity_swaps[i][step++] = j;
-				}
-			}
-			velocity_swaps[i][step] = -1;
-		}
-	}
-	if(strcmp(exec_type, "guided")==0){
-		# pragma omp for schedule(guided)
-		for(i=0;i<bodies-1;i++){
-			int step = 0;
-			for(j=i+1;j<bodies;j++){
-				md = masses[i]+masses[j];
-				dx = fabs(positions[i].x-positions[j].x);
-				dy = fabs(positions[i].y-positions[j].y);
-				dz = fabs(positions[i].z-positions[j].z);
-				if(dx<md && dy<md && dz<md){
-					//Swap Velocities
+	// 				// Store the swap
+	// 				velocity_swaps[i][step++] = j;
+	// 			}
+	// 		}
+	// 		velocity_swaps[i][step] = -1;
+	// 	}
+	// }
+	// if(strcmp(exec_type, "guided")==0){
+	// 	# pragma omp for schedule(guided)
+	// 	for(i=0;i<bodies-1;i++){
+	// 		int step = 0;
+	// 		for(j=i+1;j<bodies;j++){
+	// 			md = masses[i]+masses[j];
+	// 			dx = fabs(positions[i].x-positions[j].x);
+	// 			dy = fabs(positions[i].y-positions[j].y);
+	// 			dz = fabs(positions[i].z-positions[j].z);
+	// 			if(dx<md && dy<md && dz<md){
+	// 				//Swap Velocities
 					
-					// Store the swap
-					velocity_swaps[i][step++] = j;
-				}
-			}
-			velocity_swaps[i][step] = -1;
-		}
-	}
+	// 				// Store the swap
+	// 				velocity_swaps[i][step++] = j;
+	// 			}
+	// 		}
+	// 		velocity_swaps[i][step] = -1;
+	// 	}
+	// }
 
-	# pragma omp barrier
-		# pragma omp single
-		{	
-			for (i=0; i<bodies-1; i++){
-				j = 0;
-				while(velocity_swaps[i][j] != -1){
-					vector temp = velocities[i];
-					velocities[i] = velocities[velocity_swaps[i][j]];
-					velocities[velocity_swaps[i][j]] = temp;
-					j++;
-				}
-			}
-		}
+	// # pragma omp barrier
+	// 	# pragma omp single
+	// 	{	
+	// 		for (i=0; i<bodies-1; i++){
+	// 			j = 0;
+	// 			while(velocity_swaps[i][j] != -1){
+	// 				vector temp = velocities[i];
+	// 				velocities[i] = velocities[velocity_swaps[i][j]];
+	// 				velocities[velocity_swaps[i][j]] = temp;
+	// 				j++;
+	// 			}
+	// 		}
+	// 	}
 
 
 		
 
 
 	
-	}
+	// }
 }
 
 void computeAccelerations(char* exec_type)
@@ -294,9 +253,10 @@ void computeAccelerations(char* exec_type)
 		}
 	}
 	else if (strcmp(exec_type, "dynamic") == 0) {
-		#pragma omp parallel private(i, j) default(none) shared(accelerations, positions, masses, GravConstant, bodies)
+		#pragma omp parallel private(i, j) default(none) shared(accelerations, positions, masses, GravConstant, bodies, threads)
 		{
-		#pragma omp for schedule(dynamic, 5) 
+			int chunksize = (threads > 1) ? (int)(bodies / threads * log(threads)) : bodies;
+		#pragma omp for schedule(dynamic, chunksize)
 		for (i = 0; i < bodies; i++)
 		{
 			accelerations[i].x = 0;
@@ -326,9 +286,9 @@ void computeAccelerations(char* exec_type)
 	}
 
 	else if (strcmp(exec_type, "guided") == 0){
-		#pragma omp parallel private(i, j) default(none) shared(accelerations, positions, masses, GravConstant, bodies)
+		#pragma omp parallel private(i, j) default(none) shared(accelerations, positions, masses, GravConstant, bodies, threads)
 		{
-		#pragma omp for schedule(guided) 
+		#pragma omp for schedule(guided, bodies/threads) 
 		for (i = 0; i < bodies; i++)
 		{
 			accelerations[i].x = 0;
@@ -675,9 +635,9 @@ int main(int argc, char *argv[])
 	myMain(argc, argv, "guided");
 
 	
-	printf("Serial\n");
-	fflush(stdout);
-	myMain(argc, argv, "serial");
+	// printf("Serial\n");
+	// fflush(stdout);
+	// myMain(argc, argv, "serial");
 
 	return 0;
 }
