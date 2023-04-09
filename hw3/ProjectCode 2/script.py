@@ -50,8 +50,7 @@ for o_flag in (0,3):
 
 
         while not finished():
-            sleep(1)
-        sleep(1)    
+            pass   
         times.append([str(o_flag) + ',' + str(threads)] + get_simulation_times())
 
 # create_sbatch()
