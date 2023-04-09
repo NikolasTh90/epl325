@@ -10,7 +10,7 @@ def create_sbatch(o_flag=0, number_of_threads=40):
         sbatch.write('#SBATCH --ntasks=1\n')
         sbatch.write('### Number of tasks\n')
         sbatch.write('#SBATCH --ntasks-per-node=1 ### Number of tasks (MPI processes)\n')
-        sbatch.write('#SBATCH --cpus-per-task=40 ### Number of threads per task (OMP threads)\n')
+        sbatch.write('#SBATCH --cpus-per-task=' + str(number_of_threads) + ' ### Number of threads per task (OMP threads)\n')
         sbatch.write('#SBATCH --job-name=coun3\n')
         sbatch.write('### Job name\n')
         sbatch.write('#SBATCH --output=output.txt ### Output file\n')
