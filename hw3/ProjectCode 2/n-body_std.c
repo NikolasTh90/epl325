@@ -48,7 +48,7 @@ double *masses, GravConstant;
 int thread_count = 0;
 int Gstart = 0;
 int **velocities_swaps;
-int CHUNKSIZE = 1;
+int CHUNK_SIZE = 1;
 
 pthread_mutex_t mutex;
 pthread_barrier_t barrier;
@@ -400,7 +400,7 @@ int myMain(int argc, char *argv[], char *exec_type)
 		for (i = 0; i < thread_count; i++)
 		{
 			ids[i] = i;
-			CHUNKSIZE =(thread_count > 1) ? (int)(bodies / thread_count * log(thread_count)) : bodies;
+			CHUNK_SIZE =(thread_count > 1) ? (int)(bodies / thread_count * log(thread_count)) : bodies;
 			assert(pthread_create(&threads[i], NULL, (void *)n_body_pThreads_dynamic, (void *)&ids[i]) == 0);
 		}
 	}
