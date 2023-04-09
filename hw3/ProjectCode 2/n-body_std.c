@@ -26,7 +26,7 @@ Code Ref:https://rosettacode.org/wiki/N-body_problem#C
 
 // Chnage this value to reflect your ID number
 #define ID 1030496
-#define CHUNK_SIZE 5
+
 typedef struct
 {
 	double x, y, z;
@@ -48,6 +48,7 @@ double *masses, GravConstant;
 int thread_count = 0;
 int Gstart = 0;
 int **velocities_swaps;
+int CHUNKSIZE = 1;
 
 pthread_mutex_t mutex;
 pthread_barrier_t barrier;
@@ -291,7 +292,7 @@ void n_body_pThreads_dynamic(void *args)
 		pthread_barrier_wait(&barrier);
 
 		if (tid == 0)
-		{	
+		{
 			Gstart = 0;
 			SimulationTime++;
 			computePositions();
@@ -399,6 +400,7 @@ int myMain(int argc, char *argv[], char *exec_type)
 		for (i = 0; i < thread_count; i++)
 		{
 			ids[i] = i;
+			CHUNKSIZE =(thread_count > 1) ? (int)(bodies / thread_count * log(thread_count)) : bodies;
 			assert(pthread_create(&threads[i], NULL, (void *)n_body_pThreads_dynamic, (void *)&ids[i]) == 0);
 		}
 	}
@@ -408,12 +410,12 @@ int myMain(int argc, char *argv[], char *exec_type)
 		{
 			simulate();
 
-		#ifdef DEBUG
-					int j;
-					// printf("\nCycle %d\n",i+1);
-					for (j = 0; j < bodies; j++)
-						fprintf(dfp, "%d\t%d\t%lf\t%lf\t%lf\n", i, j, positions[j].x, positions[j].y, positions[j].z);
-		#endif
+#ifdef DEBUG
+			int j;
+			// printf("\nCycle %d\n",i+1);
+			for (j = 0; j < bodies; j++)
+				fprintf(dfp, "%d\t%d\t%lf\t%lf\t%lf\n", i, j, positions[j].x, positions[j].y, positions[j].z);
+#endif
 		}
 	}
 
