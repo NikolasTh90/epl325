@@ -15,7 +15,7 @@ def create_sbatch(o_flag=0, number_of_threads=40):
         sbatch.write('### Job name\n')
         sbatch.write('#SBATCH --output=output.txt ### Output file\n')
         sbatch.write('lscpu > lscpu_output.txt\n')
-        sbatch.write('gcc -lpthread -fopenmp -Werror -Wall -lm -O' + str(o_flag) + ' n-body_std.c\n')
+        sbatch.write('gcc -mavx512f -fopenmp -Werror -Wall -lm -O' + str(o_flag) + ' n-body_std.c\n')
         sbatch.write('./a.out ' + str(number_of_threads) + '\n')
     
 def finished():
@@ -52,7 +52,7 @@ for o_flag in (0,3):
         while not finished():
             sleep(1)
             
-        sleep(1)
+        # sleep(1)
         times.append([str(o_flag) + ',' + str(threads)] + get_simulation_times())
 
 # create_sbatch()
