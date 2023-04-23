@@ -181,16 +181,22 @@ void computeAccelerationsThread_Static(void *args){
 	for(i=param.start;i<param.end;i++){
 		accelerations[i].x = 0;	accelerations[i].y = 0; accelerations[i].z = 0;
 		for(j=0;j<bodies;j++){
-			if(i!=j){
 				//accelerations[i] = addVectors(accelerations[i],scaleVector(GravConstant*masses[j]/pow(mod(subtractVectors(positions[i],positions[j])),3),subtractVectors(positions[j],positions[i])));
 				vector sij = {positions[i].x-positions[j].x,positions[i].y-positions[j].y,positions[i].z-positions[j].z};
 				vector sji = {positions[j].x-positions[i].x,positions[j].y-positions[i].y,positions[j].z-positions[i].z};
 				double mod = sqrt(sij.x*sij.x + sij.y*sij.y + sij.z*sij.z);
 				double mod3 = mod * mod * mod;
-				double s = GravConstant*masses[j]/mod3;
+				double s;
+				if(i!=j){
+				 s = GravConstant*masses[j]/mod3;
+				}
+				else{
+					 s = 0;
+				}
 				vector S = {s*sji.x,s*sji.y,s*sji.z};
-				accelerations[i].x+=S.x;accelerations[i].y+=S.y;accelerations[i].z+=S.z;
-			}
+				accelerations[i].x+=S.x;
+				accelerations[i].y+=S.y;accelerations[i].z+=S.z;
+			
 		}
 	}
 	pthread_exit(NULL);

@@ -2,17 +2,31 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "C/C++: gcc build and debug active file",
+            "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${fileDirname}/${fileBasenameNoExtension}",
+            "program": "${workspaceFolder}/a.out",
             "args": [],
             "stopAtEntry": false,
-            "cwd": "${fileDirname}",
+            "cwd": "${workspaceFolder}",
             "environment": [],
-            "externalConsole": false,
-            "MIMode": "lldb",
-            "preLaunchTask": "C/C++: gcc build active file"
+            "externalConsole": true,
+            "MIMode": "gdb",
+            "miDebuggerPath": "/usr/bin/gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "C Build",
+            "miDebuggerArgs": "-ex 'set avx512f-unsupported 0'",
+            "linux": {
+                "launch": {
+                    "preLaunchTask": "C Build"
+                }
+            }
         }
     ]
 }

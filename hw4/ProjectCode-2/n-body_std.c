@@ -65,10 +65,10 @@ void initiateSystemRND(int bodies)
 {
 	int i;
 	srand(ID);
-	masses = (double *)malloc(bodies * sizeof(double));
-	positions = (vector *)malloc(bodies * sizeof(vector));
-	velocities = (vector *)malloc(bodies * sizeof(vector));
-	accelerations = (vector *)malloc(bodies * sizeof(vector));
+	masses = (double *)aligned_alloc(64, bodies * sizeof(double)); // allocate aligned memory
+	positions = (vector *)aligned_alloc(64, bodies * sizeof(vector));
+	velocities = (vector *)aligned_alloc(64, bodies * sizeof(vector));
+	accelerations = (vector *)aligned_alloc(64, bodies * sizeof(vector));
 	GravConstant = 0.01;
 	for (i = 0; i < bodies; i++)
 	{
@@ -101,7 +101,6 @@ void initiateSystem(char* fileName){
 }
 */
 
-
 // void resolveCollisions_static(int nthreads){
 // 	int i,j;
 // 	double dx,dy,dz,md;
@@ -118,7 +117,7 @@ void initiateSystem(char* fileName){
 // 				dz = fabs(positions[i].z-positions[j].z);
 // 				if(dx<md && dy<md && dz<md){
 // 					//Swap Velocities
-					
+
 // 					// Store the swap
 // 					velocity_swaps[i][step++] = j;
 // 				}
@@ -127,7 +126,7 @@ void initiateSystem(char* fileName){
 // 		}
 // 		# pragma omp barrier
 // 		# pragma omp single
-// 		{	
+// 		{
 // 			for (i=0; i<bodies-1; i++){
 // 				j = 0;
 // 				while(velocity_swaps[i][j] != -1){
@@ -142,279 +141,331 @@ void initiateSystem(char* fileName){
 
 // }
 
-
-
-
-void resolveCollisions(char* exec_type)
+void resolveCollisions(char *exec_type)
 {
 	int i, j;
 	double dx, dy, dz, md;
-	int velocity_swaps[bodies-1][bodies];
+	// int velocity_swaps[bodies-1][bodies];
 
-	if (strcmp(exec_type, "serial") == 0){
-		for (i = 0; i < bodies - 1; i++)
-			for (j = i + 1; j < bodies; j++)
+	// if (strcmp(exec_type, "serial") == 0){
+	for (i = 0; i < bodies - 1; i++)
+		for (j = i + 1; j < bodies; j++)
+		{
+			md = masses[i] + masses[j];
+			dx = fabs(positions[i].x - positions[j].x);
+			dy = fabs(positions[i].y - positions[j].y);
+			dz = fabs(positions[i].z - positions[j].z);
+			// if(positions[i].x==positions[j].x && positions[i].y==positions[j].y && positions[i].z==positions[j].z){
+			if (dx < md && dy < md && dz < md)
 			{
-				md = masses[i] + masses[j];
-				dx = fabs(positions[i].x - positions[j].x);
-				dy = fabs(positions[i].y - positions[j].y);
-				dz = fabs(positions[i].z - positions[j].z);
-				// if(positions[i].x==positions[j].x && positions[i].y==positions[j].y && positions[i].z==positions[j].z){
-				if (dx < md && dy < md && dz < md)
-				{
-	// Swap Velocities
-	#ifdef DEBUG
-					fprintf(stderr, "T=%d;%lf:%lf:%lf<->%lf:%lf:%lf", SimulationTime, positions[i].x, positions[i].y, positions[i].z, positions[j].x, positions[j].y, positions[j].z);
-					fprintf(stderr, "[md:%lf::%lf:%lf:%lf]", md, dx, dy, dz);
-					fprintf(stderr, "\tCollision(%d):%d<->%d\n", SimulationTime, i, j);
-	#endif
-					vector temp = velocities[i];
-					velocities[i] = velocities[j];
-					velocities[j] = temp;
-				}
-			}
-			return;
-	}
-
-
-
-
-	# pragma omp parallel private(i,j,dx,dy,dz,md) shared(bodies,masses,positions,velocity_swaps,velocities,threads, exec_type) default(none)
-	{
-	if (strcmp(exec_type, "static") == 0){
-		# pragma omp for schedule(static, bodies/threads)
-		for(i=0;i<bodies-1;i++){
-			int step = 0;
-			for(j=i+1;j<bodies;j++){
-				md = masses[i]+masses[j];
-				dx = fabs(positions[i].x-positions[j].x);
-				dy = fabs(positions[i].y-positions[j].y);
-				dz = fabs(positions[i].z-positions[j].z);
-				if(dx<md && dy<md && dz<md){
-					//Swap Velocities
-					
-					// Store the swap
-					velocity_swaps[i][step++] = j;
-				}
-			}
-			velocity_swaps[i][step] = -1;
-		}
-	}
-	if(strcmp(exec_type, "dynamic")==0){
-		# pragma omp for schedule(dynamic)
-		for(i=0;i<bodies-1;i++){
-			int step = 0;
-			for(j=i+1;j<bodies;j++){
-				md = masses[i]+masses[j];
-				dx = fabs(positions[i].x-positions[j].x);
-				dy = fabs(positions[i].y-positions[j].y);
-				dz = fabs(positions[i].z-positions[j].z);
-				if(dx<md && dy<md && dz<md){
-					//Swap Velocities
-					
-					// Store the swap
-					velocity_swaps[i][step++] = j;
-				}
-			}
-			velocity_swaps[i][step] = -1;
-		}
-	}
-	if(strcmp(exec_type, "guided")==0){
-		# pragma omp for schedule(guided)
-		for(i=0;i<bodies-1;i++){
-			int step = 0;
-			for(j=i+1;j<bodies;j++){
-				md = masses[i]+masses[j];
-				dx = fabs(positions[i].x-positions[j].x);
-				dy = fabs(positions[i].y-positions[j].y);
-				dz = fabs(positions[i].z-positions[j].z);
-				if(dx<md && dy<md && dz<md){
-					//Swap Velocities
-					
-					// Store the swap
-					velocity_swaps[i][step++] = j;
-				}
-			}
-			velocity_swaps[i][step] = -1;
-		}
-	}
-
-	# pragma omp barrier
-		# pragma omp single
-		{	
-			for (i=0; i<bodies-1; i++){
-				j = 0;
-				while(velocity_swaps[i][j] != -1){
-					vector temp = velocities[i];
-					velocities[i] = velocities[velocity_swaps[i][j]];
-					velocities[velocity_swaps[i][j]] = temp;
-					j++;
-				}
+// Swap Velocities
+#ifdef DEBUG
+				fprintf(stderr, "T=%d;%lf:%lf:%lf<->%lf:%lf:%lf", SimulationTime, positions[i].x, positions[i].y, positions[i].z, positions[j].x, positions[j].y, positions[j].z);
+				fprintf(stderr, "[md:%lf::%lf:%lf:%lf]", md, dx, dy, dz);
+				fprintf(stderr, "\tCollision(%d):%d<->%d\n", SimulationTime, i, j);
+#endif
+				vector temp = velocities[i];
+				velocities[i] = velocities[j];
+				velocities[j] = temp;
 			}
 		}
-
-
-		
-
-
-	
-	}
+	return;
 }
 
+// # pragma omp parallel private(i,j,dx,dy,dz,md) shared(bodies,masses,positions,velocity_swaps,velocities,threads, exec_type) default(none)
+// {
+// if (strcmp(exec_type, "static") == 0){
+// 	# pragma omp for schedule(static, bodies/threads)
+// 	for(i=0;i<bodies-1;i++){
+// 		int step = 0;
+// 		for(j=i+1;j<bodies;j++){
+// 			md = masses[i]+masses[j];
+// 			dx = fabs(positions[i].x-positions[j].x);
+// 			dy = fabs(positions[i].y-positions[j].y);
+// 			dz = fabs(positions[i].z-positions[j].z);
+// 			if(dx<md && dy<md && dz<md){
+// 				//Swap Velocities
 
-void computeAccelerations(char* exec_type)
+// 				// Store the swap
+// 				velocity_swaps[i][step++] = j;
+// 			}
+// 		}
+// 		velocity_swaps[i][step] = -1;
+// 	}
+// }
+// if(strcmp(exec_type, "dynamic")==0){
+// 	# pragma omp for schedule(dynamic)
+// 	for(i=0;i<bodies-1;i++){
+// 		int step = 0;
+// 		for(j=i+1;j<bodies;j++){
+// 			md = masses[i]+masses[j];
+// 			dx = fabs(positions[i].x-positions[j].x);
+// 			dy = fabs(positions[i].y-positions[j].y);
+// 			dz = fabs(positions[i].z-positions[j].z);
+// 			if(dx<md && dy<md && dz<md){
+// 				//Swap Velocities
+
+// 				// Store the swap
+// 				velocity_swaps[i][step++] = j;
+// 			}
+// 		}
+// 		velocity_swaps[i][step] = -1;
+// 	}
+// }
+// if(strcmp(exec_type, "guided")==0){
+// 	# pragma omp for schedule(guided)
+// 	for(i=0;i<bodies-1;i++){
+// 		int step = 0;
+// 		for(j=i+1;j<bodies;j++){
+// 			md = masses[i]+masses[j];
+// 			dx = fabs(positions[i].x-positions[j].x);
+// 			dy = fabs(positions[i].y-positions[j].y);
+// 			dz = fabs(positions[i].z-positions[j].z);
+// 			if(dx<md && dy<md && dz<md){
+// 				//Swap Velocities
+
+// 				// Store the swap
+// 				velocity_swaps[i][step++] = j;
+// 			}
+// 		}
+// 		velocity_swaps[i][step] = -1;
+// 	}
+// }
+
+// # pragma omp barrier
+// 	# pragma omp single
+// 	{
+// 		for (i=0; i<bodies-1; i++){
+// 			j = 0;
+// 			while(velocity_swaps[i][j] != -1){
+// 				vector temp = velocities[i];
+// 				velocities[i] = velocities[velocity_swaps[i][j]];
+// 				velocities[velocity_swaps[i][j]] = temp;
+// 				j++;
+// 			}
+// 		}
+// 	}
+
+// 	}
+// }
+
+void computeAccelerations(char *exec_type)
 {
-    int i,j;
-    if (strcmp(exec_type, "static") == 0){
-        #pragma omp parallel private(i, j) default(none) shared(accelerations, positions, masses, GravConstant, threads, bodies)
-        {
-        #pragma omp for schedule(static,bodies/threads)
-        for (i = 0; i < bodies; i++)
-        {
-            __m512d ax = _mm512_setzero_pd();
-            __m512d ay = _mm512_setzero_pd();
-            __m512d az = _mm512_setzero_pd();
-            for (j = 0; j < bodies; j += 8)
-            {
-                if (j>i || (i - j > 7 ))
-                {
-                    __m512d mass = _mm512_load_pd(&masses[j]);
-                    __m512d x = _mm512_sub_pd(_mm512_load_pd(&positions[j].x), _mm512_set1_pd(positions[i].x));
-                    __m512d y = _mm512_sub_pd(_mm512_load_pd(&positions[j].y), _mm512_set1_pd(positions[i].y));
-                    __m512d z = _mm512_sub_pd(_mm512_load_pd(&positions[j].z), _mm512_set1_pd(positions[i].z));
-                    __m512d mod3 = _mm512_pow_pd(_mm512_sqrt_pd(_mm512_fmadd_pd(x, x, _mm512_fmadd_pd(y, y, _mm512_mul_pd(z, z)))), _mm512_set1_pd(3.0));
-                    __m512d s = _mm512_mul_pd(_mm512_div_pd(_mm512_set1_pd(GravConstant), mass), _mm512_rcp14_pd(mod3));
-                    __m512d Sx = _mm512_mul_pd(s, x);
-                    __m512d Sy = _mm512_mul_pd(s, y);
-                    __m512d Sz = _mm512_mul_pd(s, z);
-                    ax = _mm512_add_pd(ax, Sx);
-                    ay = _mm512_add_pd(ay, Sy);
-                    az = _mm512_add_pd(az, Sz);
-                }
-				else if( i != j)
-				{
-					double mass = masses[j];
-					double x = positions[j].x - positions[i].x;
-					double y = positions[j].y - positions[i].y;
-					double z = positions[j].z - positions[i].z;
-					double mod3 = pow(sqrt(x*x + y*y + z*z), 3.0);
-					double s = GravConstant * mass / mod3;
-					ax = _mm512_add_pd(ax, _mm512_set1_pd(s * x));
-					ay = _mm512_add_pd(ay, _mm512_set1_pd(s * y));
-					az = _mm512_add_pd(az, _mm512_set1_pd(s * z));
-
-				}
-			}
-            }
-            accelerations[i].x = _mm512_reduce_add_pd(ax);
-            accelerations[i].y = _mm512_reduce_add_pd(ay);
-            accelerations[i].z = _mm512_reduce_add_pd(az);
-        }
-        
-        
-    }
-	else if (strcmp(exec_type, "dynamic") == 0) {
-		#pragma omp parallel private(i, j) default(none) shared(accelerations, positions, masses, GravConstant, bodies)
+	int i, j;
+	if (strcmp(exec_type, "static") == 0)
+	{
+#pragma omp parallel private(i, j) shared(accelerations, positions, masses, GravConstant, threads, bodies) default(none)
 		{
-		#pragma omp for schedule(dynamic, 5) 
-		for (i = 0; i < bodies; i++)
-        {
-            __m512d ax = _mm512_setzero_pd();
-            __m512d ay = _mm512_setzero_pd();
-            __m512d az = _mm512_setzero_pd();
-            for (j = 0; j < bodies; j += 8)
-            {
-                if (j>i || (i - j > 7 ))
-                {
-                    __m512d mass = _mm512_load_pd(&masses[j]);
-                    __m512d x = _mm512_sub_pd(_mm512_load_pd(&positions[j].x), _mm512_set1_pd(positions[i].x));
-                    __m512d y = _mm512_sub_pd(_mm512_load_pd(&positions[j].y), _mm512_set1_pd(positions[i].y));
-                    __m512d z = _mm512_sub_pd(_mm512_load_pd(&positions[j].z), _mm512_set1_pd(positions[i].z));
-                    __m512d mod3 = _mm512_pow_pd(_mm512_sqrt_pd(_mm512_fmadd_pd(x, x, _mm512_fmadd_pd(y, y, _mm512_mul_pd(z, z)))), _mm512_set1_pd(3.0));
-                    __m512d s = _mm512_mul_pd(_mm512_div_pd(_mm512_set1_pd(GravConstant), mass), _mm512_rcp14_pd(mod3));
-                    __m512d Sx = _mm512_mul_pd(s, x);
-                    __m512d Sy = _mm512_mul_pd(s, y);
-                    __m512d Sz = _mm512_mul_pd(s, z);
-                    ax = _mm512_add_pd(ax, Sx);
-                    ay = _mm512_add_pd(ay, Sy);
-                    az = _mm512_add_pd(az, Sz);
-                }
-				else if( i != j)
-				{
-					double mass = masses[j];
-					double x = positions[j].x - positions[i].x;
-					double y = positions[j].y - positions[i].y;
-					double z = positions[j].z - positions[i].z;
-					double mod3 = pow(sqrt(x*x + y*y + z*z), 3.0);
-					double s = GravConstant * mass / mod3;
-					ax = _mm512_add_pd(ax, _mm512_set1_pd(s * x));
-					ay = _mm512_add_pd(ay, _mm512_set1_pd(s * y));
-					az = _mm512_add_pd(az, _mm512_set1_pd(s * z));
+#pragma omp for schedule(static, bodies / threads)
+			for (i = 0; i < bodies; i++)
+			{
 
+				__m512d accxi = _mm512_setzero_pd();
+				__m512d accyi = _mm512_setzero_pd();
+				__m512d acczi = _mm512_setzero_pd();
+				__m512d posxi = _mm512_set1_pd(positions[i].x);
+				__m512d posyi = _mm512_set1_pd(positions[i].y);
+				__m512d poszi = _mm512_set1_pd(positions[i].z);
+
+				for (j = 0; j < bodies; j += 8)
+				{
+					if (j > i || (i - j > 7))
+					{
+						__m512d mass = _mm512_load_pd(&masses[j]);
+
+						__m512d posxj = _mm512_setr_pd(positions[j].x, positions[j + 1].x, positions[j + 2].x, positions[j + 3].x, positions[j + 4].x, positions[j + 5].x, positions[j + 6].x, positions[j + 7].x);
+						__m512d posyj = _mm512_setr_pd(positions[j].y, positions[j + 1].y, positions[j + 2].y, positions[j + 3].y, positions[j + 4].y, positions[j + 5].y, positions[j + 6].y, positions[j + 7].y);
+						__m512d poszj = _mm512_setr_pd(positions[j].z, positions[j + 1].z, positions[j + 2].z, positions[j + 3].z, positions[j + 4].z, positions[j + 5].z, positions[j + 6].z, positions[j + 7].z);
+
+						__m512d sijx = _mm512_sub_pd(posxi, posxj);
+						__m512d sijy = _mm512_sub_pd(posyi, posyj);
+						__m512d sijz = _mm512_sub_pd(poszi, poszj);
+
+						__m512d mod = _mm512_sqrt_pd(_mm512_fmadd_pd(sijx, sijx, _mm512_fmadd_pd(sijy, sijy, _mm512_mul_pd(sijz, sijz))));
+						__m512d mod2 = _mm512_mul_pd(mod, mod);
+						__m512d mod3 = _mm512_mul_pd(mod2, mod);
+						__m512d s = _mm512_div_pd(_mm512_mul_pd(_mm512_set1_pd(GravConstant), mass), mod3);
+						__m512d Sx = _mm512_mul_pd(s, _mm512_mul_pd(sijx, _mm512_set1_pd(-1)));
+						__m512d Sy = _mm512_mul_pd(s, _mm512_mul_pd(sijy, _mm512_set1_pd(-1)));
+						__m512d Sz = _mm512_mul_pd(s, _mm512_mul_pd(sijz, _mm512_set1_pd(-1)));
+						accxi = _mm512_add_pd(accxi, Sx);
+						accyi = _mm512_add_pd(accyi, Sy);
+						acczi = _mm512_add_pd(acczi, Sz);
+					}
+					else
+					{
+						int k;
+						for (k = 0; k < 8 && k + j < bodies; k++)
+						{
+							if (k + j != i)
+							{
+								vector sij = {positions[i].x - positions[j + k].x, positions[i].y - positions[j + k].y, positions[i].z - positions[j + k].z};
+								vector sji = {positions[j + k].x - positions[i].x, positions[j + k].y - positions[i].y, positions[j + k].z - positions[i].z};
+								double mod = sqrt(sij.x * sij.x + sij.y * sij.y + sij.z * sij.z);
+								double mod3 = mod * mod * mod;
+								double s = GravConstant * masses[j + k] / mod3;
+								vector S = {s * sji.x, s * sji.y, s * sji.z};
+
+								accxi[k] += S.x;
+								accyi[k] += S.y;
+								acczi[k] += S.z;
+							}
+						}
+					}
 				}
+
+				accelerations[i].x = _mm512_reduce_add_pd(accxi);
+				accelerations[i].y = _mm512_reduce_add_pd(accyi);
+				accelerations[i].z = _mm512_reduce_add_pd(acczi);
 			}
-            }
-            accelerations[i].x = _mm512_reduce_add_pd(ax);
-            accelerations[i].y = _mm512_reduce_add_pd(ay);
-            accelerations[i].z = _mm512_reduce_add_pd(az);
-        }
-	
+		}
+	}
+	else if (strcmp(exec_type, "dynamic") == 0)
+	{
+#pragma omp parallel private(i, j) default(none) shared(accelerations, positions, masses, GravConstant, bodies)
+		{
+#pragma omp for schedule(dynamic, 5)
+			for (i = 0; i < bodies; i++)
+			{
+
+				__m512d accxi = _mm512_setzero_pd();
+				__m512d accyi = _mm512_setzero_pd();
+				__m512d acczi = _mm512_setzero_pd();
+				__m512d posxi = _mm512_set1_pd(positions[i].x);
+				__m512d posyi = _mm512_set1_pd(positions[i].y);
+				__m512d poszi = _mm512_set1_pd(positions[i].z);
+
+				for (j = 0; j < bodies; j += 8)
+				{
+					if (j > i || (i - j > 7))
+					{
+						__m512d mass = _mm512_load_pd(&masses[j]);
+
+						__m512d posxj = _mm512_setr_pd(positions[j].x, positions[j + 1].x, positions[j + 2].x, positions[j + 3].x, positions[j + 4].x, positions[j + 5].x, positions[j + 6].x, positions[j + 7].x);
+						__m512d posyj = _mm512_setr_pd(positions[j].y, positions[j + 1].y, positions[j + 2].y, positions[j + 3].y, positions[j + 4].y, positions[j + 5].y, positions[j + 6].y, positions[j + 7].y);
+						__m512d poszj = _mm512_setr_pd(positions[j].z, positions[j + 1].z, positions[j + 2].z, positions[j + 3].z, positions[j + 4].z, positions[j + 5].z, positions[j + 6].z, positions[j + 7].z);
+
+						__m512d sijx = _mm512_sub_pd(posxi, posxj);
+						__m512d sijy = _mm512_sub_pd(posyi, posyj);
+						__m512d sijz = _mm512_sub_pd(poszi, poszj);
+
+						__m512d mod = _mm512_sqrt_pd(_mm512_fmadd_pd(sijx, sijx, _mm512_fmadd_pd(sijy, sijy, _mm512_mul_pd(sijz, sijz))));
+						__m512d mod2 = _mm512_mul_pd(mod, mod);
+						__m512d mod3 = _mm512_mul_pd(mod2, mod);
+						__m512d s = _mm512_div_pd(_mm512_mul_pd(_mm512_set1_pd(GravConstant), mass), mod3);
+						__m512d Sx = _mm512_mul_pd(s, _mm512_mul_pd(sijx, _mm512_set1_pd(-1)));
+						__m512d Sy = _mm512_mul_pd(s, _mm512_mul_pd(sijy, _mm512_set1_pd(-1)));
+						__m512d Sz = _mm512_mul_pd(s, _mm512_mul_pd(sijz, _mm512_set1_pd(-1)));
+						accxi = _mm512_add_pd(accxi, Sx);
+						accyi = _mm512_add_pd(accyi, Sy);
+						acczi = _mm512_add_pd(acczi, Sz);
+					}
+					else
+					{
+						int k;
+						for (k = 0; k < 8 && k + j < bodies; k++)
+						{
+							if (k + j != i)
+							{
+								vector sij = {positions[i].x - positions[j + k].x, positions[i].y - positions[j + k].y, positions[i].z - positions[j + k].z};
+								vector sji = {positions[j + k].x - positions[i].x, positions[j + k].y - positions[i].y, positions[j + k].z - positions[i].z};
+								double mod = sqrt(sij.x * sij.x + sij.y * sij.y + sij.z * sij.z);
+								double mod3 = mod * mod * mod;
+								double s = GravConstant * masses[j + k] / mod3;
+								vector S = {s * sji.x, s * sji.y, s * sji.z};
+
+								accxi[k] += S.x;
+								accyi[k] += S.y;
+								acczi[k] += S.z;
+							}
+						}
+					}
+				}
+
+				accelerations[i].x = _mm512_reduce_add_pd(accxi);
+				accelerations[i].y = _mm512_reduce_add_pd(accyi);
+				accelerations[i].z = _mm512_reduce_add_pd(acczi);
+			}
+		}
 	}
 
-	else if (strcmp(exec_type, "guided") == 0){
-		#pragma omp parallel private(i, j) default(none) shared(accelerations, positions, masses, GravConstant, bodies)
+	else if (strcmp(exec_type, "guided") == 0)
+	{
+#pragma omp parallel private(i, j) default(none) shared(accelerations, positions, masses, GravConstant, bodies)
 		{
-		#pragma omp for schedule(guided) 
-		for (i = 0; i < bodies; i++)
-        {
-            __m512d ax = _mm512_setzero_pd();
-            __m512d ay = _mm512_setzero_pd();
-            __m512d az = _mm512_setzero_pd();
-            for (j = 0; j < bodies; j += 8)
-            {
-                if (j>i || (i - j > 7 ))
-                {
-                    __m512d mass = _mm512_load_pd(&masses[j]);
-                    __m512d x = _mm512_sub_pd(_mm512_load_pd(&positions[j].x), _mm512_set1_pd(positions[i].x));
-                    __m512d y = _mm512_sub_pd(_mm512_load_pd(&positions[j].y), _mm512_set1_pd(positions[i].y));
-                    __m512d z = _mm512_sub_pd(_mm512_load_pd(&positions[j].z), _mm512_set1_pd(positions[i].z));
-                    __m512d mod3 = _mm512_pow_pd(_mm512_sqrt_pd(_mm512_fmadd_pd(x, x, _mm512_fmadd_pd(y, y, _mm512_mul_pd(z, z)))), _mm512_set1_pd(3.0));
-                    __m512d s = _mm512_mul_pd(_mm512_div_pd(_mm512_set1_pd(GravConstant), mass), _mm512_rcp14_pd(mod3));
-                    __m512d Sx = _mm512_mul_pd(s, x);
-                    __m512d Sy = _mm512_mul_pd(s, y);
-                    __m512d Sz = _mm512_mul_pd(s, z);
-                    ax = _mm512_add_pd(ax, Sx);
-                    ay = _mm512_add_pd(ay, Sy);
-                    az = _mm512_add_pd(az, Sz);
-                }
-				else if( i != j)
-				{
-					double mass = masses[j];
-					double x = positions[j].x - positions[i].x;
-					double y = positions[j].y - positions[i].y;
-					double z = positions[j].z - positions[i].z;
-					double mod3 = pow(sqrt(x*x + y*y + z*z), 3.0);
-					double s = GravConstant * mass / mod3;
-					ax = _mm512_add_pd(ax, _mm512_set1_pd(s * x));
-					ay = _mm512_add_pd(ay, _mm512_set1_pd(s * y));
-					az = _mm512_add_pd(az, _mm512_set1_pd(s * z));
+#pragma omp for schedule(guided)
+			for (i = 0; i < bodies; i++)
+			{
 
+				__m512d accxi = _mm512_setzero_pd();
+				__m512d accyi = _mm512_setzero_pd();
+				__m512d acczi = _mm512_setzero_pd();
+				__m512d posxi = _mm512_set1_pd(positions[i].x);
+				__m512d posyi = _mm512_set1_pd(positions[i].y);
+				__m512d poszi = _mm512_set1_pd(positions[i].z);
+
+				for (j = 0; j < bodies; j += 8)
+				{
+					if (j > i || (i - j > 7))
+					{
+						__m512d mass = _mm512_load_pd(&masses[j]);
+
+						__m512d posxj = _mm512_setr_pd(positions[j].x, positions[j + 1].x, positions[j + 2].x, positions[j + 3].x, positions[j + 4].x, positions[j + 5].x, positions[j + 6].x, positions[j + 7].x);
+						__m512d posyj = _mm512_setr_pd(positions[j].y, positions[j + 1].y, positions[j + 2].y, positions[j + 3].y, positions[j + 4].y, positions[j + 5].y, positions[j + 6].y, positions[j + 7].y);
+						__m512d poszj = _mm512_setr_pd(positions[j].z, positions[j + 1].z, positions[j + 2].z, positions[j + 3].z, positions[j + 4].z, positions[j + 5].z, positions[j + 6].z, positions[j + 7].z);
+
+						__m512d sijx = _mm512_sub_pd(posxi, posxj);
+						__m512d sijy = _mm512_sub_pd(posyi, posyj);
+						__m512d sijz = _mm512_sub_pd(poszi, poszj);
+
+						__m512d mod = _mm512_sqrt_pd(_mm512_fmadd_pd(sijx, sijx, _mm512_fmadd_pd(sijy, sijy, _mm512_mul_pd(sijz, sijz))));
+						__m512d mod2 = _mm512_mul_pd(mod, mod);
+						__m512d mod3 = _mm512_mul_pd(mod2, mod);
+						__m512d s = _mm512_div_pd(_mm512_mul_pd(_mm512_set1_pd(GravConstant), mass), mod3);
+						__m512d Sx = _mm512_mul_pd(s, _mm512_mul_pd(sijx, _mm512_set1_pd(-1)));
+						__m512d Sy = _mm512_mul_pd(s, _mm512_mul_pd(sijy, _mm512_set1_pd(-1)));
+						__m512d Sz = _mm512_mul_pd(s, _mm512_mul_pd(sijz, _mm512_set1_pd(-1)));
+						accxi = _mm512_add_pd(accxi, Sx);
+						accyi = _mm512_add_pd(accyi, Sy);
+						acczi = _mm512_add_pd(acczi, Sz);
+					}
+					else
+					{
+						int k;
+						for (k = 0; k < 8 && k + j < bodies; k++)
+						{
+							if (k + j != i)
+							{
+								vector sij = {positions[i].x - positions[j + k].x, positions[i].y - positions[j + k].y, positions[i].z - positions[j + k].z};
+								vector sji = {positions[j + k].x - positions[i].x, positions[j + k].y - positions[i].y, positions[j + k].z - positions[i].z};
+								double mod = sqrt(sij.x * sij.x + sij.y * sij.y + sij.z * sij.z);
+								double mod3 = mod * mod * mod;
+								double s = GravConstant * masses[j + k] / mod3;
+								vector S = {s * sji.x, s * sji.y, s * sji.z};
+
+								accxi[k] += S.x;
+								accyi[k] += S.y;
+								acczi[k] += S.z;
+							}
+						}
+					}
 				}
+
+				accelerations[i].x = _mm512_reduce_add_pd(accxi);
+				accelerations[i].y = _mm512_reduce_add_pd(accyi);
+				accelerations[i].z = _mm512_reduce_add_pd(acczi);
 			}
-            }
-            accelerations[i].x = _mm512_reduce_add_pd(ax);
-            accelerations[i].y = _mm512_reduce_add_pd(ay);
-            accelerations[i].z = _mm512_reduce_add_pd(az);
-        }
+		}
 	}
-	else {
+	else
+	{
 
 		for (i = 0; i < bodies; i++)
 		{
 			accelerations[i].x = 0;
 			accelerations[i].y = 0;
 			accelerations[i].z = 0;
-		// #pragma omp parallel for schedule(static)
+			// #pragma omp parallel for schedule(static)
 			for (j = 0; j < bodies; j++)
 			{
 				if (i != j)
@@ -432,11 +483,10 @@ void computeAccelerations(char* exec_type)
 				}
 			}
 		}
-
 	}
 }
 
-void computeVelocities(char* exec_type)
+void computeVelocities(char *exec_type)
 {
 	int i;
 	// if(strcmp(exec_type, "static") == 0)
@@ -470,31 +520,29 @@ void computeVelocities(char* exec_type)
 	// 	#pragma omp parallel private(i) default(none) shared(accelerations, velocities, threads, bodies)
 	// 	{
 	// 		#pragma omp for schedule(guided)
-			 
+
 	// 			for (i = 0; i < bodies; i++)
 	// 			{
 	// 				// velocities[i] = addVectors(velocities[i],accelerations[i]);
 	// 				vector ac = {velocities[i].x + accelerations[i].x, velocities[i].y + accelerations[i].y, velocities[i].z + accelerations[i].z};
 	// 				velocities[i] = ac;
 	// 			}
-			
+
 	// 	}
 	// }
 	// else
 	// {
-		for (i = 0; i < bodies; i++)
-		{
-			// velocities[i] = addVectors(velocities[i],accelerations[i]);
-			vector ac = {velocities[i].x + accelerations[i].x, velocities[i].y + accelerations[i].y, velocities[i].z + accelerations[i].z};
-			velocities[i] = ac;
-		}
-			
+	for (i = 0; i < bodies; i++)
+	{
+		// velocities[i] = addVectors(velocities[i],accelerations[i]);
+		vector ac = {velocities[i].x + accelerations[i].x, velocities[i].y + accelerations[i].y, velocities[i].z + accelerations[i].z};
+		velocities[i] = ac;
+	}
+
 	// }
-
-
 }
 
-void computePositions(char* exec_type)
+void computePositions(char *exec_type)
 {
 	int i;
 	// if (strcmp(exec_type, "static") == 0)
@@ -502,7 +550,7 @@ void computePositions(char* exec_type)
 	// 	#pragma omp parallel private(i) default(none) shared(accelerations, velocities, positions, threads, bodies)
 	// 	{
 	// 		#pragma omp for schedule(static, bodies/threads)
-			
+
 	// 			for (i = 0; i < bodies; i++)
 	// 			{
 	// 				// positions[i] = addVectors(positions[i],addVectors(velocities[i],scaleVector(0.5,accelerations[i])));
@@ -511,15 +559,15 @@ void computePositions(char* exec_type)
 	// 				vector bc = {positions[i].x + ac.x, positions[i].y + ac.y, positions[i].z + ac.z};
 	// 				positions[i] = bc;
 	// 			}
-				
-	// 	}	
+
+	// 	}
 	// }
 	// else if (strcmp(exec_type, "dynamic") == 0)
 	// {
 	// 	#pragma omp parallel private(i) default(none) shared(accelerations, velocities, positions, threads, bodies)
 	// 	{
 	// 		#pragma omp for schedule(dynamic)
-			
+
 	// 			for (i = 0; i < bodies; i++)
 	// 			{
 	// 				// positions[i] = addVectors(positions[i],addVectors(velocities[i],scaleVector(0.5,accelerations[i])));
@@ -528,15 +576,15 @@ void computePositions(char* exec_type)
 	// 				vector bc = {positions[i].x + ac.x, positions[i].y + ac.y, positions[i].z + ac.z};
 	// 				positions[i] = bc;
 	// 			}
-				
-	// 	}	
+
+	// 	}
 	// }
 	// else if (strcmp(exec_type, "guided") == 0)
 	// {
 	// 	#pragma omp parallel private(i) default(none) shared(accelerations, velocities, positions, threads, bodies)
 	// 	{
 	// 		#pragma omp for schedule(guided)
-			
+
 	// 			for (i = 0; i < bodies; i++)
 	// 			{
 	// 				// positions[i] = addVectors(positions[i],addVectors(velocities[i],scaleVector(0.5,accelerations[i])));
@@ -545,8 +593,8 @@ void computePositions(char* exec_type)
 	// 				vector bc = {positions[i].x + ac.x, positions[i].y + ac.y, positions[i].z + ac.z};
 	// 				positions[i] = bc;
 	// 			}
-				
-	// 	}	
+
+	// 	}
 	// }
 	// else
 	for (i = 0; i < bodies; i++)
@@ -562,7 +610,7 @@ void computePositions(char* exec_type)
 void simulate()
 {
 	SimulationTime++;
-	char* execution_type = "serial";
+	char *execution_type = "serial";
 	computeAccelerations(execution_type);
 	computePositions(execution_type);
 	computeVelocities(execution_type);
@@ -573,7 +621,7 @@ void n_body_omp_static(int threads)
 {
 	SimulationTime++;
 	omp_set_num_threads(threads);
-	char* execution_type = "static";
+	char *execution_type = "static";
 
 	computeAccelerations(execution_type);
 	computePositions(execution_type);
@@ -585,7 +633,7 @@ void n_body_omp_dynamic(int threads)
 {
 	SimulationTime++;
 	omp_set_num_threads(threads);
-	char* execution_type = "dynamic";
+	char *execution_type = "dynamic";
 
 	computeAccelerations(execution_type);
 	computePositions(execution_type);
@@ -597,15 +645,13 @@ void n_body_omp_guided(int threads)
 {
 	SimulationTime++;
 	omp_set_num_threads(threads);
-	char* execution_type = "guided";
+	char *execution_type = "guided";
 
 	computeAccelerations(execution_type);
 	computePositions(execution_type);
 	computeVelocities(execution_type);
 	resolveCollisions(execution_type);
 }
-
-
 
 void printBodiesInfo(FILE *lfp, FILE *dfp)
 {
@@ -618,17 +664,15 @@ void printBodiesInfo(FILE *lfp, FILE *dfp)
 	fprintf(stdout, "-------------------------------------------------------------------------------------------\n");
 }
 
-
-
-int myMain(int argc, char *argv[], char* exec_type)
+int myMain(int argc, char *argv[], char *exec_type)
 {
 	int i;
-	char* log_file = calloc(1, strlen("logfile_") + strlen(exec_type) + 1);
+	char *log_file = calloc(1, strlen("logfile_") + strlen(exec_type) + 1);
 	strcpy(log_file, "logfile_");
 	strcat(log_file, exec_type);
-	char* data_file = calloc(1, strlen("data_") + strlen(exec_type) + 1);
+	char *data_file = calloc(1, strlen("data_") + strlen(exec_type) + 1);
 	strcpy(data_file, "data_");
-	strcat(data_file, exec_type);		
+	strcat(data_file, exec_type);
 
 	FILE *lfp = fopen(log_file, "w");
 	FILE *dfp = fopen(data_file, "w");
@@ -638,30 +682,26 @@ int myMain(int argc, char *argv[], char* exec_type)
 		return -1;
 	}
 
-	if(argc == 3){
+	if (argc == 3)
+	{
 		timeSteps = atoi(argv[1]);
 		bodies = atoi(argv[2]);
 		threads = 1;
-		printf("%%*** RUNNING WITH VALUES %d timesteps %d bodies and %d thread(s) ***\n",timeSteps, bodies, threads);
-
+		printf("%%*** RUNNING WITH VALUES %d timesteps %d bodies and %d thread(s) ***\n", timeSteps, bodies, threads);
 	}
-	else
-	if (argc == 4)
+	else if (argc == 4)
 	{
 		timeSteps = atoi(argv[1]);
 		bodies = atoi(argv[2]);
 		threads = atoi(argv[3]);
-		printf("%%*** RUNNING WITH VALUES %d timesteps %d bodies and %d thread(s) ***\n",timeSteps, bodies, threads);
-
+		printf("%%*** RUNNING WITH VALUES %d timesteps %d bodies and %d thread(s) ***\n", timeSteps, bodies, threads);
 	}
-	else
-	if (argc == 2){
+	else if (argc == 2)
+	{
 		timeSteps = 10000;
 		bodies = 200;
 		threads = atoi(argv[1]);
-		printf("%%*** RUNNING WITH DEFAULT VALUES %d timesteps %d bodies and %d thread(s) ***\n",timeSteps, bodies, threads);
-
-		
+		printf("%%*** RUNNING WITH DEFAULT VALUES %d timesteps %d bodies and %d thread(s) ***\n", timeSteps, bodies, threads);
 	}
 
 	else
@@ -669,8 +709,7 @@ int myMain(int argc, char *argv[], char* exec_type)
 		timeSteps = 10000;
 		bodies = 200;
 		threads = 1;
-		printf("%%*** RUNNING WITH DEFAULT VALUES %d timesteps %d bodies and %d thread(s) ***\n",timeSteps, bodies, threads);
-
+		printf("%%*** RUNNING WITH DEFAULT VALUES %d timesteps %d bodies and %d thread(s) ***\n", timeSteps, bodies, threads);
 	}
 	initiateSystemRND(bodies);
 	// initiateSystem("input.txt");
@@ -682,17 +721,15 @@ int myMain(int argc, char *argv[], char* exec_type)
 	startTime(0);
 	for (i = 0; i < timeSteps; i++)
 	{
-			if(strcmp(exec_type, "static") == 0)
-				n_body_omp_static(threads);
-			else	
-				if(strcmp(exec_type, "dynamic") == 0)
-					n_body_omp_dynamic(threads);
-			else		
-				if(strcmp(exec_type, "guided") == 0)
-					n_body_omp_guided(threads);		
-			else
-				simulate();
-		
+		if (strcmp(exec_type, "static") == 0)
+			n_body_omp_static(threads);
+		else if (strcmp(exec_type, "dynamic") == 0)
+			n_body_omp_dynamic(threads);
+		else if (strcmp(exec_type, "guided") == 0)
+			n_body_omp_guided(threads);
+		else
+			simulate();
+
 #ifdef DEBUG
 		int j;
 		// printf("\nCycle %d\n",i+1);
@@ -712,7 +749,7 @@ int myMain(int argc, char *argv[], char* exec_type)
 
 int main(int argc, char *argv[])
 {
-	printf("Static\n");	
+	printf("Static\n");
 	fflush(stdout);
 	myMain(argc, argv, "static");
 
@@ -720,12 +757,10 @@ int main(int argc, char *argv[])
 	fflush(stdout);
 	myMain(argc, argv, "dynamic");
 
-	
 	printf("Guided\n");
 	fflush(stdout);
 	myMain(argc, argv, "guided");
 
-	
 	printf("Serial\n");
 	fflush(stdout);
 	myMain(argc, argv, "serial");
