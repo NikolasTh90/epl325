@@ -714,21 +714,21 @@ int myMain(int argc, char *argv[], char *exec_type)
 
 int main(int argc, char *argv[])
 {
-	printf("Static\n");
-	fflush(stdout);
-	myMain(argc, argv, "static");
-
-	printf("Dynamic\n");
-	fflush(stdout);
-	myMain(argc, argv, "dynamic");
-
-	printf("Guided\n");
-	fflush(stdout);
-	myMain(argc, argv, "guided");
-
-	// printf("Serial\n");
+	// printf("Static\n");
 	// fflush(stdout);
-	// myMain(argc, argv, "serial");
+	// myMain(argc, argv, "static");
+
+	// printf("Dynamic\n");
+	// fflush(stdout);
+	// myMain(argc, argv, "dynamic");
+
+	// printf("Guided\n");
+	// fflush(stdout);
+	// myMain(argc, argv, "guided");
+
+	printf("Serial\n");
+	fflush(stdout);
+	myMain(argc, argv, "serial");
 
 	return 0;
 }
