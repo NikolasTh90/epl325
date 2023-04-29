@@ -25,7 +25,7 @@ def finished():
         for line in output.readlines():
             if line.__contains__('Simulation Time'):
                 counter+=1
-    return True if counter==3 else False
+    return True if counter==1 else False
 
 
 def submit_sbatch():
