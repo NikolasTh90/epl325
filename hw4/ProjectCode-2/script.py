@@ -43,7 +43,7 @@ def get_simulation_times():
 from time import *
 times = list()
 for o_flag in (0,3):
-    for threads in range(1,41):
+    for threads in range(1,2):
         f = open('output.txt', 'w+')
         f.close()
         print('Creating O' + str(o_flag) + ' with ' + str(threads) + ' threads')
