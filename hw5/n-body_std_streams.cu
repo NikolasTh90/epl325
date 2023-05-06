@@ -216,7 +216,7 @@ void computeAccelerations_cuda()
 	
 	// Launch kernels on multiple streams
 	int blockSize = ((int) bodies/32)*32+32;
-	int gridSize = blockSize;
+	int gridSize = blockSize/NUM_STREAMS;
 	
 	for (int streamIndex = 0; streamIndex < NUM_STREAMS; streamIndex++)
     {
@@ -230,7 +230,7 @@ void computeAccelerations_cuda()
         int endBodyIndex = startBodyIndex + bodiesPerStream;
 
         // Launch the kernel on the stream
-        computeAccelerationsKernel<<<bodies/NUM_STREAMS, bodies, 0, stream>>>(bodies, GravConstant, cuda_positions, cuda_masses, cuda_local_accelerations, startBodyIndex, endBodyIndex);
+        computeAccelerationsKernel<<<gridSize, blockSize, 0, stream>>>(bodies, GravConstant, cuda_positions, cuda_masses, cuda_local_accelerations, startBodyIndex, endBodyIndex);
 	}
 
 	// Wait for all streams to finish
