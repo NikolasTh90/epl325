@@ -20,7 +20,7 @@ Code Ref:https://rosettacode.org/wiki/N-body_problem#C
 #include<math.h>
 #include"support.h"
 // Chnage this value to reflect your ID number
-#define ID 123456
+#define ID 1043393
 typedef struct{
 	double x,y,z;
 }vector;
@@ -29,6 +29,8 @@ int bodies,timeSteps;
 int SimulationTime = 0;
 double *masses,GravConstant;
 vector *positions,*velocities,*accelerations;
+vector *acc, *pos;
+double *mass;
 /*
 vector addVectors(vector a,vector b){
 	vector c = {a.x+b.x,a.y+b.y,a.z+b.z};
@@ -72,6 +74,10 @@ void initiateSystemRND(int bodies){
 		velocities[i].y = getRND()/5.0; // 0.0;
 		velocities[i].z = getRND()/5.0; // 0.0;
 	}
+    cudaMalloc(&acc, bodies*sizeof(vector));
+	cudaMalloc(&pos, bodies*sizeof(vector));
+	cudaMalloc(&mass, bodies*sizeof(double));
+    cudaMemcpy(mass, masses, sizeof(double)*bodies, cudaMemcpyHostToDevice);
 }
 /*
 void initiateSystem(char* fileName){
@@ -136,6 +142,44 @@ void computeAccelerations(){
 	}
 }
 
+
+__global__ void computeAccelerations_thread(vector *partialSums, vector *positions, double *masses, double GravConstant, int bodies){
+	int thread_id = blockIdx.x * blockDim.x + threadIdx.x;
+	int i = thread_id/bodies;
+	int j = thread_id%bodies;
+	partialSums[thread_id].x = 0;
+	partialSums[thread_id].y = 0; 
+	partialSums[thread_id].z = 0;
+	if(i!=j){
+		//accelerations[i] = addVectors(accelerations[i],scaleVector(GravConstant*masses[j]/pow(mod(subtractVectors(positions[i],positions[j])),3),subtractVectors(positions[j],positions[i])));
+		vector sij = {positions[i].x-positions[j].x,positions[i].y-positions[j].y,positions[i].z-positions[j].z};
+		vector sji = {positions[j].x-positions[i].x,positions[j].y-positions[i].y,positions[j].z-positions[i].z};
+		double mod = sqrt(sij.x*sij.x + sij.y*sij.y + sij.z*sij.z);
+		double mod3 = mod * mod * mod;
+		double s = GravConstant*masses[j]/mod3;
+		vector S = {s*sji.x,s*sji.y,s*sji.z};
+		partialSums[thread_id].x = S.x;
+		partialSums[thread_id].y = S.y;
+		partialSums[thread_id].z = S.z;
+	}
+}
+
+__global__ void reductionAdd(vector *partialSums, vector *accelerations, int bodies){
+	int thread_id = blockIdx.x * blockDim.x + threadIdx.x;
+	if (!(thread_id < bodies))
+		printf("%d\n", thread_id);
+	double x = 0, y = 0, z = 0;
+	int i;
+	for (i=0; i<bodies; i++){
+		x += partialSums[thread_id*bodies + i].x;
+		y += partialSums[thread_id*bodies + i].y;
+		z += partialSums[thread_id*bodies + i].z;
+	}
+	accelerations[thread_id].x = x;
+	accelerations[thread_id].y = y;
+	accelerations[thread_id].z = z;
+}
+
 void computeVelocities(){
 	int i;
 	for(i=0;i<bodies;i++){
@@ -154,6 +198,26 @@ void computePositions(){
 		vector bc = {positions[i].x+ac.x,positions[i].y+ac.y,positions[i].z+ac.z};
 		positions[i] = bc;
 	}
+}
+
+__host__ void nBody_CUDA(){
+    SimulationTime++;
+
+	vector *partialSums;
+	cudaMemcpy(pos, positions, sizeof(vector)*bodies, cudaMemcpyHostToDevice);
+	cudaMalloc(&partialSums, sizeof(vector)*(bodies*bodies));
+
+	computeAccelerations_thread<<<bodies,bodies>>>(partialSums,pos,mass,GravConstant,bodies);
+	cudaDeviceSynchronize();
+	reductionAdd<<<10,20>>>(partialSums,acc,bodies);
+	cudaDeviceSynchronize();
+
+	cudaMemcpy(accelerations, acc, sizeof(vector)*bodies, cudaMemcpyDeviceToHost);
+	cudaFree(partialSums);
+
+	computePositions();
+	computeVelocities();
+	resolveCollisions();
 }
 
 void simulate(){
@@ -186,7 +250,48 @@ int main(int argc,char* argv[]){
 		timeSteps = atoi(argv[1]);
 		bodies = atoi(argv[2]);
 	}else{
-		printf("%%*** RUNNING WITH DEFAULT VALUES ***\n");
+		printf("%%*** RUNNING CUDA WITH DEFAULT VALUES ***\n");
+		timeSteps = 10000;
+		bodies = 200;
+	}
+	initiateSystemRND(bodies);
+	//initiateSystem("input.txt");
+	fprintf(stdout,"Running With %d Bodies for %d timeSteps. Initial state:\n",bodies,timeSteps);
+	fprintf(stderr,"Running With %d Bodies for %d timeSteps. Initial state:\n",bodies,timeSteps);
+	fprintf(lfp,"Running With %d Bodies for %d timeSteps. Initial state:\n",bodies,timeSteps);
+	fprintf(lfp,"Body   \t\t\t:\t\tx\t\ty\t\t\tz\t\t|\t\tvx\t\t\tvy\t\t\tvz\t\t\n");
+	printBodiesInfo(lfp, dfp);
+	startTime(0);	
+	for(i=0;i<timeSteps;i++){
+		nBody_CUDA();
+		#ifdef DEBUG
+			int j;
+			//printf("\nCycle %d\n",i+1);
+			for(j=0;j<bodies;j++)
+				fprintf(dfp,"%d\t%d\t%lf\t%lf\t%lf\n",i,j, positions[j].x,positions[j].y,positions[j].z);
+		#endif
+	}
+    cudaFree(&acc);
+	cudaFree(&pos);
+	cudaFree(&mass);
+	stopTime(0);
+	fprintf(lfp,"\nLast Step = %d\n",i);
+	printBodiesInfo(lfp, dfp);
+	printf("\nSimulation Time:");elapsedTime(0);
+	fclose(lfp);
+	fclose(dfp);
+
+	lfp = fopen("./outputs/logfile.txt","w");
+	dfp = fopen("./outputs/data.dat","w");
+	if (lfp == NULL || dfp == NULL){
+		printf("Please create the ./outputs directory\n");
+		return -1;
+	}
+	if (argc == 3){
+		timeSteps = atoi(argv[1]);
+		bodies = atoi(argv[2]);
+	}else{
+		printf("%%*** RUNNING Serial WITH DEFAULT VALUES ***\n");
 		timeSteps = 10000;
 		bodies = 200;
 	}
