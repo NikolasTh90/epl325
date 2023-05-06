@@ -180,7 +180,7 @@ void computeAccelerations_cuda()
 
 	
 	// Launch kernels on multiple streams
-	const int blockSize = 256;
+	const int blockSize = 224;
 	const int gridSize = (bodies + blockSize - 1) / blockSize;
 	
 	computeAccelerationsKernel<<<gridSize, blockSize>>>(bodies, GravConstant, cuda_positions, cuda_masses, cuda_accelerations );
