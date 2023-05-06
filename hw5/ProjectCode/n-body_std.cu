@@ -30,7 +30,7 @@ int bodies, timeSteps;
 int SimulationTime = 0;
 double *masses, GravConstant;
 vector *positions, *velocities, *accelerations;
-vector *cuda_positions, *cuda_velocities, *cuda_accelerations;
+vector *cuda_positions, *cuda_accelerations;
 double *cuda_masses, *cuda_GravConstant;
 vector *cuda_local_accelerations;
 
@@ -86,13 +86,13 @@ void initiateSystemRND(int bodies)
 
 	
 	// Allocate device memory
-	cudaMalloc((void **)&cuda_masses, bodies * sizeof(double));
-	cudaMalloc((void **)&cuda_positions, bodies * sizeof(vector));
-	cudaMalloc((void **)&cuda_accelerations, bodies * sizeof(vector));
-	cudaMalloc((void **)&cuda_local_accelerations, bodies*bodies * sizeof(vector));
+	cudaMalloc(&cuda_masses, bodies * sizeof(double));
+	cudaMalloc(&cuda_positions, bodies * sizeof(vector));
+	cudaMalloc(&cuda_accelerations, bodies * sizeof(vector));
+	cudaMalloc(&cuda_local_accelerations, bodies*bodies * sizeof(vector));
 
 	// Transfer data from host to device
-	cudaMemcpyAsync(cuda_masses, masses, bodies * sizeof(double), cudaMemcpyHostToDevice);
+	cudaMemcpy(cuda_masses, masses, bodies * sizeof(double), cudaMemcpyHostToDevice);
 }
 /*
 void initiateSystem(char* fileName){
@@ -147,27 +147,28 @@ void resolveCollisions()
 // CUDA kernel to compute accelerations for a subset of bodies
 __global__ void computeAccelerationsKernel(int bodies, double GravConstant, vector *positions, double *masses, vector *cuda_local_accelerations)
 {
-	int i = blockIdx.x;
 	// int threadID = threadIdx.x;
 	//  Calculate the Unique Thread ID
 	int threadUniqueID = threadIdx.x + blockIdx.x * blockDim.x;
 	// int size =  dInfo[0];
-	int j = threadIdx.x;
+	int j = threadUniqueID%bodies;
+	int i = threadUniqueID/bodies;
+
 	
 	if(i < bodies) {
 			if (i != j)
 			{
 				vector sij = {positions[i].x - positions[j].x, positions[i].y - positions[j].y, positions[i].z - positions[j].z};
+				vector sji = {positions[j].x - positions[i].x, positions[j].y - positions[i].y, positions[j].z - positions[i].z};
 				double mod = sqrt(sij.x * sij.x + sij.y * sij.y + sij.z * sij.z);
 				double mod3 = mod * mod * mod;
 				double s = GravConstant * masses[j] / mod3;
-				vector S = {s * sij.x, s * sij.y, s * sij.z};
-				cuda_local_accelerations[threadUniqueID].x, = S.x;
-				cuda_local_accelerations[threadUniqueID].y, = S.y;
-				cuda_local_accelerations[threadUniqueID].z, = S.z;
+				vector S = {s * sji.x, s * sji.y, s * sji.z};
+				cuda_local_accelerations[threadUniqueID].x = S.x;
+				cuda_local_accelerations[threadUniqueID].y = S.y;
+				cuda_local_accelerations[threadUniqueID].z = S.z;
 			}
 
-			
 	}
 		
 }
@@ -176,14 +177,18 @@ __global__ void reduction_accelerations(int bodies, vector* cuda_local_accelerat
 	int threadUniqueID = threadIdx.x + blockIdx.x * blockDim.x;
 	if (threadUniqueID < bodies)
     {
-		cuda_accelerations[threadUniqueID].x = 0;
-		cuda_accelerations[threadUniqueID].y = 0;
-		cuda_accelerations[threadUniqueID].z = 0;
+		double x = 0;
+		double y = 0;
+		double z = 0;
 		for(int i = 0; i < bodies; i++){
-			cuda_accelerations[threadUniqueID].x += cuda_local_accelerations[i+(threadUniqueID*bodies)].x;
-			cuda_accelerations[threadUniqueID].y += cuda_local_accelerations[i+(threadUniqueID*bodies)].y;
-			cuda_accelerations[threadUniqueID].z += cuda_local_accelerations[i+(threadUniqueID*bodies)].z;
+			x += cuda_local_accelerations[i+(threadUniqueID*bodies)].x;
+			y += cuda_local_accelerations[i+(threadUniqueID*bodies)].y;
+			z += cuda_local_accelerations[i+(threadUniqueID*bodies)].z;
 		}
+
+		cuda_accelerations[threadUniqueID].x = x;
+		cuda_accelerations[threadUniqueID].y =y;
+		cuda_accelerations[threadUniqueID].z = z;
 	}
 
 }
@@ -195,8 +200,8 @@ void computeAccelerations_cuda()
 
 	
 	// Launch kernels on multiple streams
-	int blockSize = 224;
-	int gridSize = (bodies + blockSize - 1) / blockSize;
+	int blockSize = ((int) bodies/32)*32+32;
+	int gridSize = blockSize;
 	
 	computeAccelerationsKernel<<<gridSize, blockSize>>>(bodies, GravConstant, cuda_positions, cuda_masses, cuda_local_accelerations );
 	
@@ -329,7 +334,7 @@ int main(int argc, char *argv[])
 	startTime(0);
 	for (i = 0; i < timeSteps; i++)
 	{
-		simulate();
+		// simulate();
 #ifdef DEBUG
 		int j;
 		// printf("\nCycle %d\n",i+1);
@@ -376,8 +381,9 @@ int main(int argc, char *argv[])
 	fclose(dfp);
 
 
-	cudaFree(d_masses);
-	cudaFree(d_positions);
-	cudaFree(d_accelerations);
+	cudaFree(cuda_masses);
+	cudaFree(cuda_positions);
+	cudaFree(cuda_accelerations);
+	cudaFree(cuda_local_accelerations);
 	return 0;
 }
