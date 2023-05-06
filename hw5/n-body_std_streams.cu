@@ -161,9 +161,11 @@ __global__ void computeAccelerationsKernel(int bodies, double GravConstant, vect
 	// int size =  dInfo[0];
 	int j;
 	int i = threadUniqueID/bodies;
+	int localidx=threadUniqueID%(bodies*bodies);
+	vector S = {0,0,0};
 	if(i < bodies) {
 		double x,y,z;
-	for(j=start; j<end; j++){
+	for(j=start%bodies; j<end%bodies; j++){
 	
 			if (i != j)
 			{
@@ -172,15 +174,15 @@ __global__ void computeAccelerationsKernel(int bodies, double GravConstant, vect
 				double mod = sqrt(sij.x * sij.x + sij.y * sij.y + sij.z * sij.z);
 				double mod3 = mod * mod * mod;
 				double s = GravConstant * masses[j] / mod3;
-				vector S = {s * sji.x, s * sji.y, s * sji.z};
+				S = {s * sji.x, s * sji.y, s * sji.z};
 				x += S.x;
 				y += S.y;
 				z += S.z;
 			}
 		}
-		cuda_local_accelerations[threadUniqueID].x = S.x;
-		cuda_local_accelerations[threadUniqueID].y = S.y;
-		cuda_local_accelerations[threadUniqueID].z = S.z;
+		cuda_local_accelerations[localidx].x = x;
+		cuda_local_accelerations[localidx].y = y;
+		cuda_local_accelerations[localidx].z = z;
 
 	}
 		
@@ -200,7 +202,7 @@ __global__ void reduction_accelerations(int bodies, vector* cuda_local_accelerat
 		}
 
 		cuda_accelerations[threadUniqueID].x = x;
-		cuda_accelerations[threadUniqueID].y =y;
+		cuda_accelerations[threadUniqueID].y = y;
 		cuda_accelerations[threadUniqueID].z = z;
 	}
 
@@ -228,7 +230,7 @@ void computeAccelerations_cuda()
         int endBodyIndex = startBodyIndex + bodiesPerStream;
 
         // Launch the kernel on the stream
-        computeAccelerationsKernel<<<gridSize, blockSize, 0, stream>>>(bodies, GravConstant, cuda_positions, cuda_masses, cuda_local_accelerations, startBodyIndex, endBodyIndex);
+        computeAccelerationsKernel<<<bodies/NUM_STREAMS, bodies, 0, stream>>>(bodies, GravConstant, cuda_positions, cuda_masses, cuda_local_accelerations, startBodyIndex, endBodyIndex);
 	}
 
 	// Wait for all streams to finish
