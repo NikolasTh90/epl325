@@ -32,12 +32,9 @@ double *masses, GravConstant;
 vector *positions, *velocities, *accelerations;
 vector *cuda_positions, *cuda_velocities, *cuda_accelerations;
 double *cuda_masses, *cuda_GravConstant;
-int *bodies
+vector *cuda_local_accelerations;
 
-// Device arrays
-double *d_masses;
-vector *d_positions;
-vector *d_accelerations;
+
 
 	/*
 	vector addVectors(vector a,vector b){
@@ -92,6 +89,7 @@ void initiateSystemRND(int bodies)
 	cudaMalloc((void **)&cuda_masses, bodies * sizeof(double));
 	cudaMalloc((void **)&cuda_positions, bodies * sizeof(vector));
 	cudaMalloc((void **)&cuda_accelerations, bodies * sizeof(vector));
+	cudaMalloc((void **)&cuda_local_accelerations, bodies*bodies * sizeof(vector));
 
 	// Transfer data from host to device
 	cudaMemcpyAsync(cuda_masses, masses, bodies * sizeof(double), cudaMemcpyHostToDevice);
@@ -147,14 +145,15 @@ void resolveCollisions()
 #include <cuda_runtime.h>
 
 // CUDA kernel to compute accelerations for a subset of bodies
-__global__ void computeAccelerationsKernel(int bodies, double GravConstant, vector *positions, double *masses, vector *accelerations)
+__global__ void computeAccelerationsKernel(int bodies, double GravConstant, vector *positions, double *masses, vector *cuda_local_accelerations)
 {
 	int i = blockIdx.x;
 	// int threadID = threadIdx.x;
 	//  Calculate the Unique Thread ID
 	int threadUniqueID = threadIdx.x + blockIdx.x * blockDim.x;
 	// int size =  dInfo[0];
-	int j = threaIdx.x;
+	int j = threadIdx.x;
+	
 	if(i < bodies) {
 			if (i != j)
 			{
@@ -163,9 +162,9 @@ __global__ void computeAccelerationsKernel(int bodies, double GravConstant, vect
 				double mod3 = mod * mod * mod;
 				double s = GravConstant * masses[j] / mod3;
 				vector S = {s * sij.x, s * sij.y, s * sij.z};
-				atomicAdd(accelerations[i].x, S.x);
-				atomicAdd(accelerations[i].y, S.y);
-				atomicAdd(accelerations[i].z, S.z)
+				cuda_local_accelerations[threadUniqueID].x, = S.x;
+				cuda_local_accelerations[threadUniqueID].y, = S.y;
+				cuda_local_accelerations[threadUniqueID].z, = S.z;
 			}
 
 			
@@ -173,21 +172,40 @@ __global__ void computeAccelerationsKernel(int bodies, double GravConstant, vect
 		
 }
 
+__global__ void reduction_accelerations(int bodies, vector* cuda_local_accelerations, vector* cuda_accelerations){
+	int threadUniqueID = threadIdx.x + blockIdx.x * blockDim.x;
+	if (threadUniqueID < bodies)
+    {
+		cuda_accelerations[threadUniqueID].x = 0;
+		cuda_accelerations[threadUniqueID].y = 0;
+		cuda_accelerations[threadUniqueID].z = 0;
+		for(int i = 0; i < bodies; i++){
+			cuda_accelerations[threadUniqueID].x += cuda_local_accelerations[i+(threadUniqueID*bodies)].x;
+			cuda_accelerations[threadUniqueID].y += cuda_local_accelerations[i+(threadUniqueID*bodies)].y;
+			cuda_accelerations[threadUniqueID].z += cuda_local_accelerations[i+(threadUniqueID*bodies)].z;
+		}
+	}
+
+}
+
 void computeAccelerations_cuda()
 {
 	
-	cudaMemcpy(d_positions, positions, bodies * sizeof(vector), cudaMemcpyHostToDevice);
+	cudaMemcpy(cuda_positions, positions, bodies * sizeof(vector), cudaMemcpyHostToDevice);
 
 	
 	// Launch kernels on multiple streams
-	const int blockSize = 224;
-	const int gridSize = (bodies + blockSize - 1) / blockSize;
+	int blockSize = 224;
+	int gridSize = (bodies + blockSize - 1) / blockSize;
 	
-	computeAccelerationsKernel<<<gridSize, blockSize>>>(bodies, GravConstant, cuda_positions, cuda_masses, cuda_accelerations );
+	computeAccelerationsKernel<<<gridSize, blockSize>>>(bodies, GravConstant, cuda_positions, cuda_masses, cuda_local_accelerations );
 	
 
 	// Wait for all streams to finish
 	cudaDeviceSynchronize();
+	blockSize = bodies/16;
+	gridSize = (bodies + blockSize - 1) / blockSize;
+	reduction_accelerations<<<gridSize, blockSize>>>(bodies,cuda_local_accelerations, cuda_accelerations);
 
 	// Transfer data back to host
 	cudaMemcpy(accelerations, cuda_accelerations, bodies * sizeof(vector), cudaMemcpyDeviceToHost);
